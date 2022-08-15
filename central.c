@@ -50,6 +50,7 @@ int main()
         int acc = accept(server, (struct sockaddr*) &peer_addr, &addr_size);
         int n;
         char url[MAX_URL_SIZE];
+        char returned = OK;
         
         printf("Connection Established\n");
         char ip[INET_ADDRSTRLEN];
@@ -64,7 +65,7 @@ int main()
 
         printf("\n%s\n", url);
 
-        send(acc, OK, sizeof(char), 0);
+        send(acc, &returned, sizeof(char), 0);
 
         close(acc);
     }
