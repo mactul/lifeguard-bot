@@ -14,6 +14,8 @@
 
 #define MAX_URL_SIZE 1024
 
+#define OK 0
+
 int main()
 {
     int server = socket(AF_INET, SOCK_STREAM, 0);
@@ -61,6 +63,8 @@ int main()
         url[n] = '\0';
 
         printf("\n%s\n", url);
+
+        send(acc, OK, sizeof(char), 0);
 
         close(acc);
     }
