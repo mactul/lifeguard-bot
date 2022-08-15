@@ -1,5 +1,11 @@
-#include <sys/socket.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/un.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
 #define SERVER_IP "127.0.0.1"
 #define SERVER_PORT 12754
