@@ -40,25 +40,30 @@ int main()
     while (1)
     {
         int acc = accept(server, (struct sockaddr*) &peer_addr, &addr_size);
-        int n;
-        char url[MAX_URL_SIZE];
-        char returned = OK;
+        if(acc != -1)
+        {
+            int n;
+            char url[MAX_URL_SIZE];
+            char returned = OK;
+
+            printf("%d\n", acc);
+            
+            printf("Connection Established\n");
+            char ip[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &(peer_addr.sin_addr), ip, INET_ADDRSTRLEN);
         
-        printf("Connection Established\n");
-        char ip[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &(peer_addr.sin_addr), ip, INET_ADDRSTRLEN);
-     
-        // "ntohs(peer_addr.sin_port)" function is
-        // for finding port number of client
-        printf("\tIP   : %s\n\tPORT : %d\n", ip, ntohs(peer_addr.sin_port));
+            // "ntohs(peer_addr.sin_port)" function is
+            // for finding port number of client
+            printf("\tIP   : %s\n\tPORT : %d\n", ip, ntohs(peer_addr.sin_port));
 
-        n = recv(acc, url, sizeof(url), 0);
-        url[n] = '\0';
+            n = recv(acc, url, sizeof(url), 0);
+            url[n] = '\0';
 
-        printf("\n%s\n", url);
+            printf("\n%s\n", url);
 
-        send(acc, &returned, sizeof(char), 0);
+            send(acc, &returned, sizeof(char), 0);
 
-        close(acc);
+            close(acc);
+        }
     }
 }
