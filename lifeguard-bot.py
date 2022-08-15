@@ -3,7 +3,7 @@ from connexion_data import *
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
-    s.sendall(b"Hello, world")
+    s.sendall(b"https://test.com")
     data = s.recv(1024)
 
 if len(data) == 1 and data[0] == OK:
