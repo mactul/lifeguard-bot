@@ -1,9 +1,5 @@
 import socket
-
-HOST = "185.163.124.98"  # The server's hostname or IP address
-PORT = 12754  # The port used by the server
-
-OK = 0
+from connexion_data import *
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
