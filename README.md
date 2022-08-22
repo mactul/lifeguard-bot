@@ -10,7 +10,7 @@ central.c
     - sends the end of the database on port Z
 - receives "ready" on port Z
 
-bot.py
+lifeguard-bot.py
 - sends links to central on port X
 - receives security audits on port A
 
