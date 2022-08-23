@@ -1,6 +1,7 @@
 #include "cmp_hash.h"
 #include <dirent.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -13,27 +14,38 @@ int is_regular_file(const char *path)
     return S_ISREG(path_stat.st_mode);
 }
 
-char get_next_malware_hash(Cmp_hash* phash)
+char get_next_malware_hash(Cmp_hash* phash, FILE* fptr)
 {
-    static int pos = 0;
-    static FILE *fptr;
-    if(pos == 0)
-    {
-        if ((fptr = fopen("db.bin","rb")) == NULL)
-        {
-            printf("Error! opening file");
-            return;
-        }
-    }
     fread(phash, sizeof(Cmp_hash), 1, fptr);
     
-    if(feof(fptr))
+    return !feof(fptr);
+}
+
+double best_malware_correspondance(Cmp_hash* phash)
+{
+    Cmp_hash current_hash;
+    FILE* fptr;
+    char hashes_left = 1;
+    double correspondance = 0.0;
+    double max_corr = 0.0;
+
+    if ((fptr = fopen("db.bin","rb")) == NULL)
     {
-        fclose(fptr);
-        pos = 0;
-        return 0;
+        printf("Error! opening file");
+        return 0.0;
     }
-    return 1;
+    while(hashes_left && correspondance != 1.0)
+    {
+        hashes_left = get_next_malware_hash(&current_hash, fptr);
+        correspondance = cmp_two_hashes(phash, &current_hash);
+        if(correspondance > max_corr)
+        {
+            max_corr = correspondance;
+        }
+    }
+    fclose(fptr);
+
+    return certainty(max_corr);
 }
 
 
@@ -43,7 +55,7 @@ void create_db_from_folder(char* folder_path)
     struct dirent *dir;
     FILE *fptr;
 
-    if ((fptr = fopen("db.bin","ab")) == NULL)
+    if ((fptr = fopen("db.bin","wb")) == NULL)
     {
         printf("Error! opening file");
         return;
@@ -74,5 +86,11 @@ void create_db_from_folder(char* folder_path)
 
 int main()
 {
-    create_db_from_folder("malwares/files/");
+    Cmp_hash hash;
+
+    //create_db_from_folder("malwares/files/");
+
+
+    cmp_create_hash(&hash, "central.c");
+    printf("%f\n", best_malware_correspondance(&hash));
 }

@@ -5,7 +5,7 @@
                                      // because 0.5 = exp(x*log(0.9)) <=> x = log(0.5)/log(0.9)
                                      // Like that, 90% corresponding <=> 50% certainty
 
-typedef struct cmp_hash {
+typedef struct __attribute__((__packed__)) cmp_hash {
     uint32_t size;
     uint32_t data_occ[256]; // nb occ char
     uint32_t data_gap[256]; // index max ecart
