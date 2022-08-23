@@ -4,12 +4,13 @@
 #include <unistd.h>
 #include <sys/un.h>
 #include <pthread.h>
+#include <errno.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include "connexion_data.h"
 
-void unknown_links_gestion(void* arg)
+void* unknown_links_gestion(void* arg)
 {
     int server = socket(AF_INET, SOCK_STREAM, 0);
     struct timeval tv;
@@ -31,16 +32,20 @@ void unknown_links_gestion(void* arg)
         printf("Unable to bind\n");
          
     if (listen(server, 3) == 0)
+    {
         printf("Listening ...\n");
+    }
     else
         printf("Unable to listen\n");
-     
+
     socklen_t addr_size;
     addr_size = sizeof(struct sockaddr_in);
 
     while (1)
     {
+        printf("waiting connexion\n");
         int acc = accept(server, (struct sockaddr*) &peer_addr, &addr_size);
+        printf("%d\n", errno);
         if(acc != -1)
         {
             int n;
@@ -75,5 +80,7 @@ int main()
     
     pthread_create (&unknown_links_thread, NULL, *unknown_links_gestion, NULL);
 
-    pthread_join(unknown_links_gestion, NULL); // infinite loop in thread
+    pthread_join(unknown_links_thread, NULL); // infinite loop in thread
+
+    printf("end\n");
 }
