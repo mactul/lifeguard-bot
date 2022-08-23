@@ -12,6 +12,12 @@
 
 #define DISCORD_ATTACHMENTS_START "https://cdn.discordapp.com/attachments/"
 
+typedef struct __attribute__((__packed__)) links_data {
+    char priority;
+    uint64_t message_id;
+    char url[MAX_URL_SIZE];
+} Links_data;
+
 char startswith(char* str, char* occ)
 {
     while(*str == *occ && *str != '\0' && *occ != '\0')
@@ -84,7 +90,7 @@ void* unknown_links_gestion(void* arg)
         if(acc != -1)
         {
             int n;
-            char url[MAX_URL_SIZE];
+            Links_data data;
             char extension[MAX_EXTENSION_SIZE];
             char returned = OK;
 
@@ -98,12 +104,12 @@ void* unknown_links_gestion(void* arg)
             // for finding port number of client
             printf("\tIP   : %s\n\tPORT : %d\n", ip, ntohs(peer_addr.sin_port));
 
-            n = recv(acc, url, sizeof(url), 0);
-            url[n] = '\0';
+            n = recv(acc, &data, sizeof(data), 0);
+            data.url[n-sizeof(char)-sizeof(uint64_t)] = '\0';
 
-            printf("\n%s\n", url);
+            printf("\n%d %d %llu %s\n", sizeof(data), data.priority, data.message_id, data.url);
 
-            get_extension(url, extension);
+            get_extension(data.url, extension);
 
             printf("%s\n", extension);
 
@@ -112,7 +118,7 @@ void* unknown_links_gestion(void* arg)
                 || strcmp(extension, ".php") == 0 || strcmp(extension, ".php3") == 0
                 || strcmp(extension, ".shtm") == 0 || strcmp(extension, ".shtml") == 0
                 || strcmp(extension, ".cfm") == 0 || strcmp(extension, ".cfml") == 0
-                || !startswith(url, DISCORD_ATTACHMENTS_START))
+                || !startswith(data.url, DISCORD_ATTACHMENTS_START))
             {
                 // it's a website
             }

@@ -22,3 +22,8 @@ scrapping-unit.py
 virus-checker.c
 - receives virus links on port Y
     - sends security audits back to bot on port A
+
+
+## Data structures
+links on port X
+- |priority (1 byte)|message id (8 bytes)|url (<512 bytes)|
