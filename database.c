@@ -13,6 +13,30 @@ int is_regular_file(const char *path)
     return S_ISREG(path_stat.st_mode);
 }
 
+char get_next_malware_hash(Cmp_hash* phash)
+{
+    static int pos = 0;
+    static FILE *fptr;
+    if(pos == 0)
+    {
+        if ((fptr = fopen("db.bin","rb")) == NULL)
+        {
+            printf("Error! opening file");
+            return;
+        }
+    }
+    fread(phash, sizeof(Cmp_hash), 1, fptr);
+    
+    if(feof(fptr))
+    {
+        fclose(fptr);
+        pos = 0;
+        return 0;
+    }
+    return 1;
+}
+
+
 void create_db_from_folder(char* folder_path)
 {
     DIR *d;
@@ -22,7 +46,7 @@ void create_db_from_folder(char* folder_path)
     if ((fptr = fopen("db.bin","ab")) == NULL)
     {
         printf("Error! opening file");
-        exit(1);
+        return;
     }
     
     d = opendir(folder_path);
@@ -30,14 +54,15 @@ void create_db_from_folder(char* folder_path)
     {
         while ((dir = readdir(d)) != NULL)
         {
-            if(is_regular_file(dir->d_name))
+            char path[1024];
+
+            strcpy(path, folder_path);
+            strcat(path, dir->d_name);
+            if(is_regular_file(path))
             {
                 Cmp_hash hash;
-
-                if(cmp_create_hash(&hash, dir->d_name) == OK)
+                if(cmp_create_hash(&hash, path) == OK)
                 {
-                    printf("%s\n", dir->d_name);
-                    printf("%d\n", hash.size);
                     fwrite(&hash, sizeof(hash), 1, fptr);
                 }
             }
@@ -49,5 +74,5 @@ void create_db_from_folder(char* folder_path)
 
 int main()
 {
-    create_db_from_folder(".");
+    create_db_from_folder("malwares/files/");
 }
