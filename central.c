@@ -10,6 +10,43 @@
 #include <sys/socket.h>
 #include "connexion_data.h"
 
+#define DISCORD_ATTACHMENTS_START "https://cdn.discordapp.com/attachments/"
+
+char startswith(char* str, char* occ)
+{
+    while(*str == *occ && *str != '\0' && *occ != '\0')
+    {
+        str++;
+        occ++;
+    }
+    return *occ == '\0';
+}
+
+void get_extension(char* url, char* extension)
+{
+    int i = strlen(url) - 1;
+    while(url[i] != '.' && url[i] != '/' && i > 0)
+    {
+        i--;
+    }
+    if(url[i] == '/')
+    {
+        extension[0] = '\0';
+    }
+    else
+    {
+        int j = i;
+        while(j > 1 && url[j] != '/')
+        {
+            j--;
+        }
+        if(url[j-1] == '/') // there is 2 /, it's http(s)://
+            extension[0] = '\0';
+        else
+            strcpy(extension, &(url[i]));
+    }
+}
+
 void* unknown_links_gestion(void* arg)
 {
     int server = socket(AF_INET, SOCK_STREAM, 0);
@@ -43,13 +80,12 @@ void* unknown_links_gestion(void* arg)
 
     while (1)
     {
-        printf("waiting connexion\n");
         int acc = accept(server, (struct sockaddr*) &peer_addr, &addr_size);
-        printf("%d\n", errno);
         if(acc != -1)
         {
             int n;
             char url[MAX_URL_SIZE];
+            char extension[MAX_EXTENSION_SIZE];
             char returned = OK;
 
             printf("%d\n", acc);
@@ -66,6 +102,24 @@ void* unknown_links_gestion(void* arg)
             url[n] = '\0';
 
             printf("\n%s\n", url);
+
+            get_extension(url, extension);
+
+            printf("%s\n", extension);
+
+            if(extension[0] == '\0' || strcmp(extension, ".html") == 0
+                || strcmp(extension, ".htm") == 0 || strcmp(extension, ".asp") == 0
+                || strcmp(extension, ".php") == 0 || strcmp(extension, ".php3") == 0
+                || strcmp(extension, ".shtm") == 0 || strcmp(extension, ".shtml") == 0
+                || strcmp(extension, ".cfm") == 0 || strcmp(extension, ".cfml") == 0
+                || !startswith(url, DISCORD_ATTACHMENTS_START))
+            {
+                // it's a website
+            }
+            else
+            {
+                // it's a file
+            }
 
             send(acc, &returned, sizeof(char), 0);
 
