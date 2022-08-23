@@ -1,14 +1,15 @@
 #include <stdio.h>
+#include <netdb.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/un.h>
-#include <netdb.h>
+#include <pthread.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include "connexion_data.h"
 
-int main()
+void unknown_links_gestion(void* arg)
 {
     int server = socket(AF_INET, SOCK_STREAM, 0);
     struct timeval tv;
@@ -17,8 +18,8 @@ int main()
     my_addr.sin_family = AF_INET;
     my_addr.sin_addr.s_addr = INADDR_ANY;
     
-    my_addr.sin_addr.s_addr = inet_addr(SERVER_IP);
-    my_addr.sin_port = htons(SERVER_PORT);
+    my_addr.sin_addr.s_addr = inet_addr(CENTRAL_IP);
+    my_addr.sin_port = htons(UNKNOWN_LINKS_PORT);
 
     tv.tv_sec = 60;
     tv.tv_usec = 0;
@@ -66,4 +67,13 @@ int main()
             close(acc);
         }
     }
+}
+
+int main()
+{
+    pthread_t unknown_links_thread;
+    
+    pthread_create (&unknown_links_thread, NULL, *unknown_links_gestion, NULL);
+
+    pthread_join(unknown_links_gestion, NULL); // infinite loop in thread
 }
