@@ -34,10 +34,11 @@ double best_malware_correspondance(Cmp_hash* phash)
         printf("Error! opening file");
         return 0.0;
     }
-    while(hashes_left && correspondance != 1.0)
+    while(hashes_left && max_corr != 1.0)
     {
         hashes_left = get_next_malware_hash(&current_hash, fptr);
         correspondance = cmp_two_hashes(phash, &current_hash);
+        printf("%d %d\n", current_hash.size, current_hash.data_occ['a']);
         if(correspondance > max_corr)
         {
             max_corr = correspondance;
@@ -88,9 +89,9 @@ int main()
 {
     Cmp_hash hash;
 
-    //create_db_from_folder("malwares/files/");
+    create_db_from_folder("malwares/files/");
 
 
-    cmp_create_hash(&hash, "central.c");
+    cmp_create_hash(&hash, "lifeguard-bot.py");
     printf("%f\n", best_malware_correspondance(&hash));
 }
