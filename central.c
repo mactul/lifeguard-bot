@@ -186,22 +186,17 @@ void* conn_infos_gestion(void* arg)
                     case REQUEST_DB: ;
                         FILE* fptr;
                         Cmp_hash hash;
-                        char hashes_left = 1;
                         char returned;
+
                         if ((fptr = fopen("db.bin","rb")) == NULL)
                         {
                             printf("Error! opening file");
                             return NULL;
                         }
                         fseek(fptr, infos_data.port_or_dbpos, SEEK_SET);
-                        if(feof(fptr))
-                        {
-                            hashes_left = 0;
-                        }
-                        while(hashes_left)
+                        while(get_next_malware_hash(&hash, fptr))
                         {
                             returned = TRANSFERT_ERROR;
-                            hashes_left = get_next_malware_hash(&hash, fptr);
                             if(hash.size != 0)
                             {
                                 while(returned != TRANSFERT_OK)
@@ -210,6 +205,7 @@ void* conn_infos_gestion(void* arg)
                                     recv(acc, &returned, sizeof(char), 0);
                                 }
                             }
+                            printf("%d\n", hash.size);
                         }
                         hash.size = 0;
                         send(acc, &hash, sizeof(hash), 0);

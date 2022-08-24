@@ -23,7 +23,6 @@ double best_malware_correspondance(Cmp_hash* phash)
 {
     Cmp_hash current_hash;
     FILE* fptr;
-    char hashes_left = 1;
     double correspondance = 0.0;
     double max_corr = 0.0;
     int counter = 0;
@@ -33,9 +32,8 @@ double best_malware_correspondance(Cmp_hash* phash)
         printf("Error! opening file");
         return 0.0;
     }
-    while(hashes_left && max_corr != 1.0)
+    while(get_next_malware_hash(&current_hash, fptr) && max_corr != 1.0)
     {
-        hashes_left = get_next_malware_hash(&current_hash, fptr);
         correspondance = cmp_two_hashes(phash, &current_hash);
         if(correspondance > max_corr)
         {
@@ -73,7 +71,7 @@ void create_db_from_folder(char* folder_path)
             if(is_regular_file(path))
             {
                 Cmp_hash hash;
-                if(cmp_create_hash(&hash, path) == OK)
+                if(cmp_create_hash(&hash, path) == OK && hash.size != 0)
                 {
                     fwrite(&hash, sizeof(hash), 1, fptr);
                 }
@@ -83,15 +81,3 @@ void create_db_from_folder(char* folder_path)
         fclose(fptr);
     }
 }
-
-/*
-int main()
-{
-    Cmp_hash hash;
-
-    //create_db_from_folder("malwares/files/");
-
-
-cmp_create_hash(&hash, "test.virus");
-    printf("\nmalware variant recognized at %f%%\n\n", 100.0*best_malware_correspondance(&hash));
-}*/

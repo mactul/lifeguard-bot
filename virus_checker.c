@@ -22,6 +22,9 @@ void request_db(void)
 
     Conn_infos info_data;
 
+    FILE* fptr;
+    char mode[] = "ab";
+
     if (client < 0)
         printf("Error in client creating\n");
     else
@@ -41,16 +44,31 @@ void request_db(void)
     else
         printf("Error in Connection\n");
     
-    stat("db.bin", &st);
 
     info_data.what = REQUEST_DB;
     info_data.password = CENTRAL_PASSWORD;
-    info_data.port_or_dbpos = 0;
+    if(stat("db2.bin", &st) != -1)
+    {
+        info_data.port_or_dbpos = st.st_size;
+    }
+    else
+    {
+        info_data.port_or_dbpos = 0;
+        mode[0] = 'w';
+    }
     info_data.ip = 0; // not required for request_db
+
+    printf("%d\n", info_data.port_or_dbpos);
     
     send(client, &info_data, sizeof(info_data), 0);  // send the data to the server
 
     hash.size = 1;
+
+    if ((fptr = fopen("db2.bin", mode)) == NULL)
+    {
+        printf("Error! opening file");
+        return;
+    }
 
     while(hash.size != 0)
     {
@@ -63,11 +81,14 @@ void request_db(void)
             send(client, &returned, sizeof(char), 0);
             n = recv(client, &hash, sizeof(hash), 0);
         }
-        printf("%d\n", hash.size);
+        if(hash.size != 0)
+        {
+            fwrite(&hash, sizeof(hash), 1, fptr);
+        }
         returned = TRANSFERT_OK;
         send(client, &returned, sizeof(char), 0);
     }
-    printf("hello\n");
+    fclose(fptr);
 
 }
 
