@@ -1,8 +1,6 @@
-#include "cmp_hash.h"
+#include "database.h"
 #include <dirent.h>
-#include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -39,8 +37,6 @@ double best_malware_correspondance(Cmp_hash* phash)
     {
         hashes_left = get_next_malware_hash(&current_hash, fptr);
         correspondance = cmp_two_hashes(phash, &current_hash);
-        if(counter < 10)
-            printf("%d %d %f\n", current_hash.size, current_hash.data_occ['a'], correspondance);
         if(correspondance > max_corr)
         {
             max_corr = correspondance;
@@ -88,6 +84,7 @@ void create_db_from_folder(char* folder_path)
     }
 }
 
+/*
 int main()
 {
     Cmp_hash hash;
@@ -95,7 +92,6 @@ int main()
     //create_db_from_folder("malwares/files/");
 
 
-    cmp_create_hash(&hash, "test.virus");
-    printf("%d\n", hash.size);
-    printf("%f\n", best_malware_correspondance(&hash));
-}
+cmp_create_hash(&hash, "test.virus");
+    printf("\nmalware variant recognized at %f%%\n\n", 100.0*best_malware_correspondance(&hash));
+}*/

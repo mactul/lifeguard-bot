@@ -1,9 +1,31 @@
-#define CENTRAL_IP "127.0.0.1"
-#define UNKNOWN_LINKS_PORT 12732
+#include <stdint.h>
 
-#define BOT_IP "127.0.0.1"
+#define CENTRAL_IP "127.0.0.1"
+
+#define UNKNOWN_LINKS_PORT 12732
+#define INFOS_PORT 12733
 
 #define MAX_URL_SIZE 1024
 #define MAX_EXTENSION_SIZE 32
 
-#define OK 0
+#define TRANSFERT_OK 1
+#define TRANSFERT_ERROR 2
+
+enum what {
+    READY,
+    REQUEST_DB
+};
+
+typedef struct __attribute__((__packed__)) links_data {
+    char priority;
+    uint64_t message_id;
+    char url[MAX_URL_SIZE];
+} Links_data;
+
+
+typedef struct __attribute__((__packed__)) conn_infos {
+    char what;
+    uint64_t password;
+    uint64_t port_or_dbpos;
+    uint64_t ip;
+} Conn_infos;

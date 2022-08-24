@@ -1,9 +1,9 @@
 #include <stdint.h>
 
 #define BUFFER_SIZE 2048
-#define CORRECTION_VALUE 6.57881348  // log(0.5)/log(0.9)
-                                     // because 0.5 = exp(x*log(0.9)) <=> x = log(0.5)/log(0.9)
-                                     // Like that, 90% corresponding <=> 50% certainty
+#define CORRECTION_VALUE 8.31295041412 // log(0.5)/log(0.92)
+                                       // because 0.5 = exp(x*log(0.92)) <=> x = log(0.5)/log(0.92)
+                                       // Like that, 92% corresponding <=> 50% certainty
 
 typedef struct __attribute__((__packed__)) cmp_hash {
     uint32_t size;

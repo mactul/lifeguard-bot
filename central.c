@@ -9,14 +9,11 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include "connexion_data.h"
+#include "central_credentials.h"
+#include "database.h"
 
 #define DISCORD_ATTACHMENTS_START "https://cdn.discordapp.com/attachments/"
 
-typedef struct __attribute__((__packed__)) links_data {
-    char priority;
-    uint64_t message_id;
-    char url[MAX_URL_SIZE];
-} Links_data;
 
 char startswith(char* str, char* occ)
 {
@@ -92,7 +89,7 @@ void* unknown_links_gestion(void* arg)
             int n;
             Links_data data;
             char extension[MAX_EXTENSION_SIZE];
-            char returned = OK;
+            char returned = TRANSFERT_OK;
 
             printf("%d\n", acc);
             
@@ -134,11 +131,109 @@ void* unknown_links_gestion(void* arg)
     }
 }
 
+void* conn_infos_gestion(void* arg)
+{
+    int server = socket(AF_INET, SOCK_STREAM, 0);
+    struct timeval tv;
+
+    struct sockaddr_in my_addr, peer_addr;
+    my_addr.sin_family = AF_INET;
+    my_addr.sin_addr.s_addr = INADDR_ANY;
+    
+    my_addr.sin_addr.s_addr = inet_addr(CENTRAL_IP);
+    my_addr.sin_port = htons(INFOS_PORT);
+
+    tv.tv_sec = 60;
+    tv.tv_usec = 0;
+    setsockopt(server, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+ 
+    if (bind(server, (struct sockaddr*) &my_addr, sizeof(my_addr)) == 0)
+        printf("Binded Correctly\n");
+    else
+        printf("Unable to bind\n");
+         
+    if (listen(server, 3) == 0)
+    {
+        printf("Listening ...\n");
+    }
+    else
+        printf("Unable to listen\n");
+
+    socklen_t addr_size;
+    addr_size = sizeof(struct sockaddr_in);
+
+    while (1)
+    {
+        int acc = accept(server, (struct sockaddr*) &peer_addr, &addr_size);
+        if(acc != -1)
+        {
+            Conn_infos infos_data;
+            
+            printf("Connection Established\n");
+            char ip[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &(peer_addr.sin_addr), ip, INET_ADDRSTRLEN);
+        
+            // "ntohs(peer_addr.sin_port)" function is
+            // for finding port number of client
+            printf("\tIP   : %s\n\tPORT : %d\n", ip, ntohs(peer_addr.sin_port));
+
+            recv(acc, &infos_data, sizeof(infos_data), 0);
+
+            if(infos_data.password == CENTRAL_PASSWORD)
+            {
+                switch(infos_data.what)
+                {
+                    case REQUEST_DB: ;
+                        FILE* fptr;
+                        Cmp_hash hash;
+                        char hashes_left = 1;
+                        char returned;
+                        if ((fptr = fopen("db.bin","rb")) == NULL)
+                        {
+                            printf("Error! opening file");
+                            return NULL;
+                        }
+                        fseek(fptr, infos_data.port_or_dbpos, SEEK_SET);
+                        if(feof(fptr))
+                        {
+                            hashes_left = 0;
+                        }
+                        while(hashes_left)
+                        {
+                            returned = TRANSFERT_ERROR;
+                            hashes_left = get_next_malware_hash(&hash, fptr);
+                            if(hash.size != 0)
+                            {
+                                while(returned != TRANSFERT_OK)
+                                {
+                                    send(acc, &hash, sizeof(hash), 0);
+                                    recv(acc, &returned, sizeof(char), 0);
+                                }
+                            }
+                        }
+                        hash.size = 0;
+                        send(acc, &hash, sizeof(hash), 0);
+
+                        fclose(fptr);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            close(acc);
+        }
+    }
+}
+
 int main()
 {
     pthread_t unknown_links_thread;
+    pthread_t conn_infos_thread;
     
     pthread_create (&unknown_links_thread, NULL, *unknown_links_gestion, NULL);
+
+    pthread_create (&conn_infos_thread, NULL, *conn_infos_gestion, NULL);
 
     pthread_join(unknown_links_thread, NULL); // infinite loop in thread
 
