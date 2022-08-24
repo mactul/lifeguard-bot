@@ -75,6 +75,8 @@ enum status_codes cmp_create_hash(Cmp_hash* phash, char* filepath)
         index += n;
     }
 
+    fclose(file);
+
     return OK;
 }
 
