@@ -57,7 +57,7 @@ enum status_codes cmp_create_hash(Cmp_hash* phash, char* filepath)
     
     memset(phash, 0, sizeof(Cmp_hash));
     
-    file = fopen(filepath, "r");
+    file = fopen(filepath, "rb");
 
     if(file == NULL)
         return FILE_NOT_FOUND;
