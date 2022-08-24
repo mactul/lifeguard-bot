@@ -3,9 +3,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/un.h>
+#include <sys/ioctl.h>
 #include <errno.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <net/if.h>
 #include <sys/socket.h>
 #include "cmp_hash.h"
 #include "connexion_data.h"
@@ -57,8 +59,6 @@ void request_db(void)
         mode[0] = 'w';
     }
     info_data.ip = 0; // not required for request_db
-
-    printf("%d\n", info_data.port_or_dbpos);
     
     send(client, &info_data, sizeof(info_data), 0);  // send the data to the server
 
@@ -92,10 +92,68 @@ void request_db(void)
 
 }
 
+void listen_links(void)
+{
+    int server = socket(AF_INET, SOCK_STREAM, 0);
+    struct timeval tv;
+    struct ifreq ifr;
+    struct sockaddr_in my_addr, peer_addr;
+    my_addr.sin_family = AF_INET;
+    my_addr.sin_addr.s_addr = INADDR_ANY;
+
+    ifr.ifr_addr.sa_family = AF_INET;
+    strncpy(ifr.ifr_name, "eth0", IFNAMSIZ-1);
+    ioctl(server, SIOCGIFADDR, &ifr);
+    
+    my_addr.sin_addr.s_addr = inet_addr(inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
+    my_addr.sin_port = htons(0);  // any available port
+
+    tv.tv_sec = 60;
+    tv.tv_usec = 0;
+    setsockopt(server, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+ 
+    if (bind(server, (struct sockaddr*) &my_addr, sizeof(my_addr)) == 0)
+        printf("Binded Correctly\n");
+    else
+        printf("Unable to bind\n");
+        
+    if (listen(server, 3) == 0)
+    {
+        printf("Listening ...\n");
+    }
+    else
+        printf("Unable to listen\n");
+
+    socklen_t addr_size;
+    addr_size = sizeof(struct sockaddr_in);
+
+    getsockname(server, (struct sockaddr*) &my_addr, &addr_size);
+
+    printf("%s %d\n", inet_ntoa(my_addr.sin_addr), ntohs(my_addr.sin_port));
+
+    while (1)
+    {
+        int acc = accept(server, (struct sockaddr*) &peer_addr, &addr_size);
+        if(acc != -1)
+        {
+            printf("Connection Established\n");
+            char ip[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &(peer_addr.sin_addr), ip, INET_ADDRSTRLEN);
+        
+            // "ntohs(peer_addr.sin_port)" function is
+            // for finding port number of client
+            printf("\tIP   : %s\n\tPORT : %d\n", ip, ntohs(peer_addr.sin_port));
+
+            close(acc);
+        }
+    }
+}
 
 int main()
 {
     request_db();
+
+    listen_links();
     
     return 0;
 }

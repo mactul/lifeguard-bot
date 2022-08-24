@@ -205,7 +205,6 @@ void* conn_infos_gestion(void* arg)
                                     recv(acc, &returned, sizeof(char), 0);
                                 }
                             }
-                            printf("%d\n", hash.size);
                         }
                         hash.size = 0;
                         send(acc, &hash, sizeof(hash), 0);

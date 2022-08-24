@@ -47,13 +47,13 @@ double best_malware_correspondance(Cmp_hash* phash)
 }
 
 
-void create_db_from_folder(char* folder_path)
+void add_db_from_folder(char* folder_path, char check_if_exists)
 {
     DIR *d;
     struct dirent *dir;
     FILE *fptr;
 
-    if ((fptr = fopen("db.bin","wb")) == NULL)
+    if ((fptr = fopen("db.bin","ab")) == NULL)
     {
         printf("Error! opening file");
         return;
@@ -73,7 +73,8 @@ void create_db_from_folder(char* folder_path)
                 Cmp_hash hash;
                 if(cmp_create_hash(&hash, path) == OK && hash.size != 0)
                 {
-                    fwrite(&hash, sizeof(hash), 1, fptr);
+                    if(!check_if_exists || best_malware_correspondance(&hash) != 1.0)
+                        fwrite(&hash, sizeof(hash), 1, fptr);
                 }
             }
         }

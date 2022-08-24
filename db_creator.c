@@ -2,7 +2,7 @@
 
 int main()
 {
-    create_db_from_folder("malwares/files/");
+    add_db_from_folder("malwares/files/", 1);
 
     return 0;
 }
