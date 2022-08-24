@@ -1,4 +1,4 @@
-#include "database.c"
+#include "database.h"
 
 int main()
 {
