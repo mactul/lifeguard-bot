@@ -7,13 +7,13 @@
 #define MAX_U32 4294967295
 
 
-void _update_hash(Cmp_hash* phash, unsigned char* buffer, uint32_t* last_viewed, uint32_t* max_gap, uint32_t index)
+void _update_hash(Cmp_hash* phash, unsigned char* buffer, int n, uint32_t* last_viewed, uint32_t* max_gap, uint32_t index)
 {
     /*
     Internal function, used to update the hash with the data of the buffer
     */
     uint32_t i = 0;  // i is uint32_t to avoid implicit conversions
-    while(buffer[i] != '\0')
+    while(i < n)
     {
         if(max_gap[buffer[i]] < index + i - last_viewed[buffer[i]])
         {
@@ -65,11 +65,10 @@ enum status_codes cmp_create_hash(Cmp_hash* phash, char* filepath)
     while(phash->size < MAX_U32 && n == BUFFER_SIZE)
     {
         n = fread(buffer, 1, BUFFER_SIZE, file);
-        buffer[n] = '\0';
         
         // We just look at the first 4 GB, beyond that the uint32_t are too small
         if(phash->size + n <= MAX_U32)
-            _update_hash(phash, buffer, last_viewed, max_gap, index);
+            _update_hash(phash, buffer, n, last_viewed, max_gap, index);
         
         phash->size += n;
         index += n;
@@ -106,4 +105,16 @@ double cmp_two_hashes(Cmp_hash* phash1, Cmp_hash* phash2)
 double certainty(double corresponding_value)
 {
     return exp(CORRECTION_VALUE*log(corresponding_value));
+}
+
+char check_hash_integrity(Cmp_hash* phash)
+{
+    uint32_t size = 0;
+
+    for(int i = 0; i < 256; i++)
+    {
+        size += phash->data_occ[i];
+    }
+
+    return size == phash->size;
 }

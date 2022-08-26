@@ -14,8 +14,9 @@ int is_regular_file(const char *path)
 
 char get_next_malware_hash(Cmp_hash* phash, FILE* fptr)
 {
-    fread(phash, sizeof(Cmp_hash), 1, fptr);
-    
+    int n = fread(phash, 1, sizeof(Cmp_hash), fptr);
+    if(n != sizeof(Cmp_hash) && n != 0)
+        return -1;
     return !feof(fptr);
 }
 
@@ -27,7 +28,7 @@ double best_malware_correspondance(Cmp_hash* phash)
     double max_corr = 0.0;
     int counter = 0;
 
-    if ((fptr = fopen("db.bin","rb")) == NULL)
+    if ((fptr = fopen(DB_FILE_NAME,"rb")) == NULL)
     {
         printf("Error! opening file");
         return 0.0;
@@ -47,13 +48,59 @@ double best_malware_correspondance(Cmp_hash* phash)
 }
 
 
+int64_t check_db_integrity()
+{
+    FILE* fptr;
+    Cmp_hash hash;
+    char integrity = 1;
+    char result;
+
+    if(access(DB_FILE_NAME, F_OK) != 0)
+    {
+        // file not exists, so DB has integrity
+        return DB_INTEGRITY;
+    }
+
+    if ((fptr = fopen(DB_FILE_NAME,"rb")) == NULL)
+    {
+        printf("Error! opening file");
+        return 0;
+    }
+
+    while((result = get_next_malware_hash(&hash, fptr)) && result != -1 && (integrity = check_hash_integrity(&hash)))
+    {
+        ;
+    }
+    if(integrity && result != -1)
+    {
+        fclose(fptr);
+        return DB_INTEGRITY;
+    }
+    else
+    {
+        int64_t size = 2052 * (int64_t)(ftell(fptr)/2052) - sizeof(Cmp_hash);
+        if(size < 0)
+            size = 0;
+        
+        fclose(fptr);
+        return size;
+    }
+}
+
 void add_db_from_folder(char* folder_path, char check_if_exists)
 {
     DIR *d;
     struct dirent *dir;
     FILE *fptr;
+    int64_t integrity;
 
-    if ((fptr = fopen("db.bin","ab")) == NULL)
+    if((integrity = check_db_integrity()) != DB_INTEGRITY)
+    {
+        printf("%d\n", integrity);
+        truncate(DB_FILE_NAME, integrity);
+    }
+
+    if ((fptr = fopen(DB_FILE_NAME,"ab")) == NULL)
     {
         printf("Error! opening file");
         return;
@@ -62,6 +109,7 @@ void add_db_from_folder(char* folder_path, char check_if_exists)
     d = opendir(folder_path);
     if (d)
     {
+        int counter = 0;
         while ((dir = readdir(d)) != NULL)
         {
             char path[1024];
@@ -75,6 +123,9 @@ void add_db_from_folder(char* folder_path, char check_if_exists)
                 {
                     if(!check_if_exists || best_malware_correspondance(&hash) != 1.0)
                         fwrite(&hash, sizeof(hash), 1, fptr);
+                    remove(path); // delete the file
+                    counter++;
+                    printf("%d\n", counter);
                 }
             }
         }
