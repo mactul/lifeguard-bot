@@ -8,12 +8,21 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include "connexion_data.h"
+#include <semaphore.h>
 #include "central_credentials.h"
 #include "database.h"
+#include "queue.h"
 
 #define DISCORD_ATTACHMENTS_START "https://cdn.discordapp.com/attachments/"
 
+pthread_mutex_t server_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t links_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+sem_t v_server_sem;
+sem_t v_links_sem;
+
+ServerQueue v_checkers_servers_queue;
+LinksQueue v_checkers_links_queue;
 
 char startswith(char* str, char* occ)
 {
@@ -50,6 +59,51 @@ void get_extension(char* url, char* extension)
     }
 }
 
+void send_to_v_checker(ServerQueue_el* v_checker_addr, Links_data* pdata)
+{
+    struct sockaddr_in my_addr;
+    int client = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (client < 0)
+        printf("Error in client creating\n");
+    else
+        printf("Client Created\n");
+         
+    my_addr.sin_family = AF_INET;
+    my_addr.sin_addr.s_addr = INADDR_ANY;
+    my_addr.sin_port = v_checker_addr->port;
+    
+    // This ip address is the server ip address
+    my_addr.sin_addr.s_addr = v_checker_addr->ip;
+     
+    socklen_t addr_size = sizeof my_addr;
+    int con = connect(client, (struct sockaddr*) &my_addr, sizeof my_addr);
+    if (con == 0)
+        printf("Client Connected\n");
+    else
+        printf("Error in Connection\n");
+    
+    
+    send(client, pdata, sizeof(Links_data), 0);  // send the data to the server
+}
+
+void* links_attribution(void* arg)
+{
+    while(1)
+    {
+        LinksQueue_el links_el;
+        ServerQueue_el server_el;
+
+        sem_wait(&v_links_sem);
+        sem_wait(&v_server_sem);
+
+        queue_next_server(&v_checkers_servers_queue, &server_el, &server_mutex);
+        queue_next_links(&v_checkers_links_queue, &links_el, &links_mutex);
+
+        send_to_v_checker(&server_el, &(links_el.data));
+    }
+}
+
 void* unknown_links_gestion(void* arg)
 {
     int server = socket(AF_INET, SOCK_STREAM, 0);
@@ -71,7 +125,7 @@ void* unknown_links_gestion(void* arg)
     else
         printf("Unable to bind\n");
          
-    if (listen(server, 3) == 0)
+    if (listen(server, 1) == 0)
     {
         printf("Listening ...\n");
     }
@@ -110,18 +164,20 @@ void* unknown_links_gestion(void* arg)
 
             printf("%s\n", extension);
 
-            if(extension[0] == '\0' || strcmp(extension, ".html") == 0
+            if((extension[0] == '\0' || strcmp(extension, ".html") == 0
                 || strcmp(extension, ".htm") == 0 || strcmp(extension, ".asp") == 0
                 || strcmp(extension, ".php") == 0 || strcmp(extension, ".php3") == 0
                 || strcmp(extension, ".shtm") == 0 || strcmp(extension, ".shtml") == 0
-                || strcmp(extension, ".cfm") == 0 || strcmp(extension, ".cfml") == 0
-                || !startswith(data.url, DISCORD_ATTACHMENTS_START))
+                || strcmp(extension, ".cfm") == 0 || strcmp(extension, ".cfml") == 0)
+                && !startswith(data.url, DISCORD_ATTACHMENTS_START))
             {
                 // it's a website
             }
             else
             {
                 // it's a file
+                queue_add_links(&v_checkers_links_queue, &data, &links_mutex);
+                sem_post(&v_links_sem);
             }
 
             send(acc, &returned, sizeof(char), 0);
@@ -211,6 +267,10 @@ void* conn_infos_gestion(void* arg)
 
                         fclose(fptr);
                         break;
+                    case READY:
+                        queue_add_server(&v_checkers_servers_queue, infos_data.ip, infos_data.port_or_dbpos, &server_mutex);
+                        sem_post(&v_server_sem);
+                        break;
                     default:
                         break;
                 }
@@ -225,12 +285,22 @@ int main()
 {
     pthread_t unknown_links_thread;
     pthread_t conn_infos_thread;
-    
-    pthread_create (&unknown_links_thread, NULL, *unknown_links_gestion, NULL);
+    pthread_t links_attribution_thread;
 
-    pthread_create (&conn_infos_thread, NULL, *conn_infos_gestion, NULL);
+    v_checkers_servers_queue.first = NULL;
+    v_checkers_servers_queue.last = NULL;
+
+    v_checkers_links_queue.first = NULL;
+    v_checkers_links_queue.last = NULL;
+
+    sem_init(&v_server_sem, 0, 0);
+    sem_init(&v_links_sem, 0, 0);
+    
+    pthread_create(&unknown_links_thread, NULL, *unknown_links_gestion, NULL);
+
+    pthread_create(&conn_infos_thread, NULL, *conn_infos_gestion, NULL);
+
+    pthread_create(&links_attribution_thread, NULL, *links_attribution, NULL);
 
     pthread_join(unknown_links_thread, NULL); // infinite loop in thread
-
-    printf("end\n");
 }

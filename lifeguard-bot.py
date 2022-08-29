@@ -7,7 +7,7 @@ def build_bin_data(priority, message_id, url):
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
-    s.sendall(build_bin_data(12, 1011632414604406946, "https://truc.com/test.php"))
+    s.sendall(build_bin_data(12, 1011632414604406946, "https://cdn.discordapp.com/attachments/575715281234690048/1012823945965228064/IMG_2306.png"))
     data = s.recv(1024)
 
 if len(data) == 1 and data[0] == OK:

@@ -17,7 +17,7 @@
 
 void request_db(void)
 {
-    struct sockaddr_in my_addr, my_addr1;
+    struct sockaddr_in my_addr;
     int client = socket(AF_INET, SOCK_STREAM, 0);
     struct stat st;
     Cmp_hash hash;
@@ -92,6 +92,43 @@ void request_db(void)
 
 }
 
+void send_ready(struct sockaddr_in addr)
+{
+    struct sockaddr_in my_addr;
+    int client = socket(AF_INET, SOCK_STREAM, 0);
+    
+    Conn_infos info_data;
+
+
+    if (client < 0)
+        printf("Error in client creating\n");
+    else
+        printf("Client Created\n");
+         
+    my_addr.sin_family = AF_INET;
+    my_addr.sin_addr.s_addr = INADDR_ANY;
+    my_addr.sin_port = htons(INFOS_PORT);
+    
+    // This ip address is the server ip address
+    my_addr.sin_addr.s_addr = inet_addr(CENTRAL_IP);
+     
+    socklen_t addr_size = sizeof my_addr;
+    int con = connect(client, (struct sockaddr*) &my_addr, sizeof my_addr);
+    if (con == 0)
+        printf("Client Connected\n");
+    else
+        printf("Error in Connection\n");
+    
+
+    info_data.what = READY;
+    info_data.password = CENTRAL_PASSWORD;
+    info_data.port_or_dbpos = addr.sin_port;
+    info_data.ip = addr.sin_addr.s_addr;
+    
+    send(client, &info_data, sizeof(info_data), 0);  // send the data to the server
+
+}
+
 void listen_links(void)
 {
     int server = socket(AF_INET, SOCK_STREAM, 0);
@@ -131,8 +168,12 @@ void listen_links(void)
 
     printf("%s %d\n", inet_ntoa(my_addr.sin_addr), ntohs(my_addr.sin_port));
 
+    send_ready(my_addr);
+
     while (1)
     {
+        int n;
+        Links_data data;
         int acc = accept(server, (struct sockaddr*) &peer_addr, &addr_size);
         if(acc != -1)
         {
@@ -144,7 +185,16 @@ void listen_links(void)
             // for finding port number of client
             printf("\tIP   : %s\n\tPORT : %d\n", ip, ntohs(peer_addr.sin_port));
 
+            n = recv(acc, &data, sizeof(data), 0);
+            data.url[n-sizeof(char)-sizeof(uint64_t)] = '\0';
+
+            printf("%d %s\n", data.message_id, data.url);
+
+            sleep(1);
+
             close(acc);
+
+            send_ready(my_addr);
         }
     }
 }
