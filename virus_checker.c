@@ -129,6 +129,38 @@ void send_ready(struct sockaddr_in addr)
 
 }
 
+void send_audit_to_bot(Audit* paudit)
+{
+    struct sockaddr_in my_addr;
+    int client = socket(AF_INET, SOCK_STREAM, 0);
+    
+    Conn_infos info_data;
+
+
+    if (client < 0)
+        printf("Error in client creating\n");
+    else
+        printf("Client Created\n");
+         
+    my_addr.sin_family = AF_INET;
+    my_addr.sin_addr.s_addr = INADDR_ANY;
+    my_addr.sin_port = htons(AUDIT_PORT);
+    
+    // This ip address is the server ip address
+    my_addr.sin_addr.s_addr = inet_addr(BOT_IP);
+     
+    socklen_t addr_size = sizeof my_addr;
+    int con = connect(client, (struct sockaddr*) &my_addr, sizeof my_addr);
+    if (con == 0)
+        printf("Client Connected\n");
+    else
+        printf("Error in Connection\n");
+    
+    
+    send(client, paudit, sizeof(Audit), 0);  // send the data to the server
+
+}
+
 void listen_links(void)
 {
     int server = socket(AF_INET, SOCK_STREAM, 0);
@@ -187,15 +219,24 @@ void listen_links(void)
             printf("\tIP   : %s\n\tPORT : %d\n", ip, ntohs(peer_addr.sin_port));
 
             n = recv(acc, &data, sizeof(data), 0);
-            data.url[n-sizeof(char)-sizeof(uint64_t)] = '\0';
-
-            printf("%d %s\n", data.message_id, data.url);
-
-            cmp_create_hash_from_url(&hash, data.url);
-
-            printf("Malware variant recognized with %f%% certainty\n", 100*best_malware_correspondance(&hash));
+            data.url[n-sizeof(char)-2*sizeof(uint64_t)] = '\0';
 
             close(acc);
+
+            if(data.password == CENTRAL_PASSWORD)
+            {
+                Audit audit;
+                printf("%d %s\n", data.message_id, data.url);
+
+                cmp_create_hash_from_url(&hash, data.url);
+
+                audit.message_id = data.message_id;
+                audit.password = CENTRAL_PASSWORD;
+                audit.p = best_malware_correspondance(&hash);
+
+                send_audit_to_bot(&audit);
+            }
+
 
             send_ready(my_addr);
         }

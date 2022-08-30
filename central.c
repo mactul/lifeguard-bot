@@ -173,31 +173,34 @@ void* unknown_links_gestion(void* arg)
             printf("\tIP   : %s\n\tPORT : %d\n", ip, ntohs(peer_addr.sin_port));
 
             n = recv(acc, &data, sizeof(data), 0);
-            data.url[n-sizeof(char)-sizeof(uint64_t)] = '\0';
+            data.url[n-sizeof(char)-2*sizeof(uint64_t)] = '\0';
 
-            printf("\n%d %d %llu %s\n", sizeof(data), data.priority, data.message_id, data.url);
-
-            get_extension(data.url, extension);
-
-            printf("%s\n", extension);
-
-            if((extension[0] == '\0' || strcmp(extension, ".html") == 0
-                || strcmp(extension, ".htm") == 0 || strcmp(extension, ".asp") == 0
-                || strcmp(extension, ".php") == 0 || strcmp(extension, ".php3") == 0
-                || strcmp(extension, ".shtm") == 0 || strcmp(extension, ".shtml") == 0
-                || strcmp(extension, ".cfm") == 0 || strcmp(extension, ".cfml") == 0)
-                && !startswith(data.url, DISCORD_ATTACHMENTS_START))
+            if(data.password == CENTRAL_PASSWORD)
             {
-                // it's a website
-            }
-            else
-            {
-                // it's a file
-                queue_add_links(&v_checkers_links_queue, &data, &links_mutex);
-                sem_post(&v_links_sem);
-            }
+                printf("\n%d %d %llu %s\n", sizeof(data), data.priority, data.message_id, data.url);
 
-            send(acc, &returned, sizeof(char), 0);
+                get_extension(data.url, extension);
+
+                printf("%s\n", extension);
+
+                if((extension[0] == '\0' || strcmp(extension, ".html") == 0
+                    || strcmp(extension, ".htm") == 0 || strcmp(extension, ".asp") == 0
+                    || strcmp(extension, ".php") == 0 || strcmp(extension, ".php3") == 0
+                    || strcmp(extension, ".shtm") == 0 || strcmp(extension, ".shtml") == 0
+                    || strcmp(extension, ".cfm") == 0 || strcmp(extension, ".cfml") == 0)
+                    && !startswith(data.url, DISCORD_ATTACHMENTS_START))
+                {
+                    // it's a website
+                }
+                else
+                {
+                    // it's a file
+                    queue_add_links(&v_checkers_links_queue, &data, &links_mutex);
+                    sem_post(&v_links_sem);
+                }
+
+                send(acc, &returned, sizeof(char), 0);
+            }
 
             close(acc);
         }
