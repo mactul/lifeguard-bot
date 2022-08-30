@@ -18,6 +18,7 @@ enum status_codes {
 };
 
 enum status_codes cmp_create_hash(Cmp_hash* phash, char* filepath);
+enum status_codes cmp_create_hash_from_url(Cmp_hash* phash, char* url);
 double cmp_two_hashes(Cmp_hash* phash1, Cmp_hash* phash2);
 double certainty(double corresponding_value);
 char check_hash_integrity(Cmp_hash* phash);
