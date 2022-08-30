@@ -9,7 +9,7 @@
 #include <netinet/in.h>
 #include <net/if.h>
 #include <sys/socket.h>
-#include "cmp_hash.h"
+#include "database.h"
 #include "connexion_data.h"
 #include "central_credentials.h"
 #include <sys/stat.h>
@@ -177,6 +177,7 @@ void listen_links(void)
         int acc = accept(server, (struct sockaddr*) &peer_addr, &addr_size);
         if(acc != -1)
         {
+            Cmp_hash hash;
             printf("Connection Established\n");
             char ip[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &(peer_addr.sin_addr), ip, INET_ADDRSTRLEN);
@@ -190,7 +191,9 @@ void listen_links(void)
 
             printf("%d %s\n", data.message_id, data.url);
 
-            sleep(1);
+            cmp_create_hash_from_url(&hash, data.url);
+
+            printf("Malware variant recognized with %f%% certainty\n", 100*best_malware_correspondance(&hash));
 
             close(acc);
 

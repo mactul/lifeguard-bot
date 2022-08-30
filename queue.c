@@ -42,6 +42,10 @@ char queue_next_server(ServerQueue* pqueue, ServerQueue_el* pel, pthread_mutex_t
     ptemp = pqueue->last->newer;
     free(pqueue->last);
     pqueue->last = ptemp;
+    if(ptemp == NULL)
+    {
+        pqueue->first = NULL;
+    }
     pthread_mutex_unlock(pmutex);
 
     return 1;
@@ -84,6 +88,10 @@ char queue_next_links(LinksQueue* pqueue, LinksQueue_el* pel, pthread_mutex_t* p
     ptemp = pqueue->last->newer;
     free(pqueue->last);
     pqueue->last = ptemp;
+    if(ptemp == NULL)
+    {
+        pqueue->first = NULL;
+    }
     pthread_mutex_unlock(pmutex);
 
     return 1;

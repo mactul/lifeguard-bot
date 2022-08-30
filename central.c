@@ -59,32 +59,44 @@ void get_extension(char* url, char* extension)
     }
 }
 
-void send_to_v_checker(ServerQueue_el* v_checker_addr, Links_data* pdata)
+char send_to_v_checker(ServerQueue_el* v_checker_addr, Links_data* pdata)
 {
     struct sockaddr_in my_addr;
     int client = socket(AF_INET, SOCK_STREAM, 0);
 
     if (client < 0)
+    {
         printf("Error in client creating\n");
+        return 0;
+    }
     else
+    {
         printf("Client Created\n");
-         
+    }
+
     my_addr.sin_family = AF_INET;
     my_addr.sin_addr.s_addr = INADDR_ANY;
     my_addr.sin_port = v_checker_addr->port;
     
     // This ip address is the server ip address
     my_addr.sin_addr.s_addr = v_checker_addr->ip;
-     
+    
     socklen_t addr_size = sizeof my_addr;
     int con = connect(client, (struct sockaddr*) &my_addr, sizeof my_addr);
     if (con == 0)
+    {
         printf("Client Connected\n");
+    }
     else
+    {
         printf("Error in Connection\n");
+        return 0;
+    }
     
     
     send(client, pdata, sizeof(Links_data), 0);  // send the data to the server
+
+    return 1;
 }
 
 void* links_attribution(void* arg)
@@ -100,7 +112,12 @@ void* links_attribution(void* arg)
         queue_next_server(&v_checkers_servers_queue, &server_el, &server_mutex);
         queue_next_links(&v_checkers_links_queue, &links_el, &links_mutex);
 
-        send_to_v_checker(&server_el, &(links_el.data));
+        if(!send_to_v_checker(&server_el, &(links_el.data)))
+        {
+            //echec
+            queue_add_links(&v_checkers_links_queue, &(links_el.data), &links_mutex);
+            sem_post(&v_links_sem);
+        }
     }
 }
 
