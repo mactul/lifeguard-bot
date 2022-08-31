@@ -1,31 +1,49 @@
 import ctypes
-import socket
+from pickle import REDUCE
 import discord
+import asyncio
 from struct import unpack
 from connexion_data import *
-from threading import Thread
 from central_credentials import *
 from discord_credentials import TOKEN
 
-def build_links_data(priority, password, message_id, url):
-    return bytes([priority])+bytes(ctypes.c_uint64(password))+bytes(ctypes.c_uint64(message_id))+bytes(url, 'ascii')
+GREEN = 0x05f776
+ORANGE = 0xff7700
+RED = 0xff0000
+
+def build_links_data(priority, password, channel_id, message_id, url):
+    return bytes([priority])+bytes(ctypes.c_uint64(password))+bytes(ctypes.c_uint64(channel_id))+bytes(ctypes.c_uint64(message_id))+bytes(url, 'ascii')+bytes([0])
 
 def decode_audit_data(audit):
-    return unpack('QQd', audit)
+    return unpack('QQQd', audit)
 
-def server():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind((BOT_IP, AUDIT_PORT))
-        s.listen()
-        while True:
-            print("cc")
-            conn, addr = s.accept()
-            with conn:
-                print(f"Connected by {addr}")
-                data = conn.recv(3*8) # sizeof(uin64_t)+sizeof(uin64_t)+sizeof(double)
-                message_id, password, p = decode_audit_data(data)
 
-                print(message_id, password, p)
+async def handle_audit_response(reader, writer):
+    data = await reader.read(4*8) # sizeof(uin64_t)+sizeof(uin64_t)+sizeof(uin64_t)+sizeof(double)
+    channel_id, message_id, password, p = decode_audit_data(data)
+
+    print(message_id, password, p)
+    channel = client.get_channel(channel_id)
+    message = await channel.fetch_message(message_id)
+
+    if p == 0.0:
+        embed = discord.Embed(title="Antivirus Scanning Audit", description="We have not found any known virus that matches this file", color=GREEN)
+    else:
+        if p <= 0.75:
+            color = ORANGE
+        else:
+            color = RED
+        embed = discord.Embed(title="Antivirus Scanning Audit", description="We suspect that this file is a malware variant.\nConfidence: "+str(round(100*p, 2))+"%", color=color)
+    await message.reply(embed=embed)
+
+async def audit_server():
+    server = await asyncio.start_server(handle_audit_response, BOT_IP, AUDIT_PORT)
+    
+    addrs = ', '.join(str(sock.getsockname()) for sock in server.sockets)
+    print(f'Serving on {addrs}')
+
+    async with server:
+        await server.serve_forever()
 
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
@@ -37,15 +55,20 @@ async def on_message(message:discord.Message):
         
     for attachment in message.attachments:
         print(attachment.url)
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((CENTRAL_IP, UNKNOWN_LINKS_PORT))
-            s.sendall(build_links_data(1, CENTRAL_PASSWORD, message.id, attachment.url))
-            data = s.recv(1)
+        reader, writer = await asyncio.open_connection(CENTRAL_IP, UNKNOWN_LINKS_PORT)
+        
+        writer.write(build_links_data(1, CENTRAL_PASSWORD, message.channel.id, message.id, attachment.url))
+        await writer.drain()
 
-            if len(data) == 1 and data[0] == TRANSFERT_OK:
-                print("data sended succesfuly")
-            else:
-                print("connexion interrupted before the end of the transfert")
+        data = await reader.read(1)
+
+        if len(data) == 1 and data[0] == TRANSFERT_OK:
+            print("data sended succesfuly")
+        else:
+            print("connexion interrupted before the end of the transfert")
+        
+        writer.close()
+        await writer.wait_closed()
     
 
 
@@ -56,6 +79,8 @@ async def on_ready():
     print(client.user.id)
     print("---------")
 
-    Thread(target=server).start()
+    client.loop.create_task(audit_server())
+    
+    print("released")
 
 client.run(TOKEN)

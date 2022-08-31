@@ -173,11 +173,12 @@ void* unknown_links_gestion(void* arg)
             printf("\tIP   : %s\n\tPORT : %d\n", ip, ntohs(peer_addr.sin_port));
 
             n = recv(acc, &data, sizeof(data), 0);
-            data.url[n-sizeof(char)-2*sizeof(uint64_t)] = '\0';
+            printf("%d\n", n);
+            //data.url[n-sizeof(char)-3*sizeof(uint64_t)] = '\0';
 
             if(data.password == CENTRAL_PASSWORD)
             {
-                printf("\n%d %d %llu %s\n", sizeof(data), data.priority, data.message_id, data.url);
+                printf("\n%d %d %llu %llu %s\n", sizeof(data), data.priority, data.channel_id, data.message_id, data.url);
 
                 get_extension(data.url, extension);
 

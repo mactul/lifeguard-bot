@@ -21,6 +21,7 @@ enum what {
 typedef struct __attribute__((__packed__)) links_data {
     char priority;
     uint64_t password;
+    uint64_t channel_id;
     uint64_t message_id;
     char url[MAX_URL_SIZE];
 } Links_data;
@@ -34,6 +35,7 @@ typedef struct __attribute__((__packed__)) conn_infos {
 } Conn_infos;
 
 typedef struct __attribute__((__packed__)) audit {
+    uint64_t channel_id;
     uint64_t message_id;
     uint64_t password;
     double p;

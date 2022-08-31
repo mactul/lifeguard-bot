@@ -219,7 +219,7 @@ void listen_links(void)
             printf("\tIP   : %s\n\tPORT : %d\n", ip, ntohs(peer_addr.sin_port));
 
             n = recv(acc, &data, sizeof(data), 0);
-            data.url[n-sizeof(char)-2*sizeof(uint64_t)] = '\0';
+            //data.url[n-sizeof(char)-3*sizeof(uint64_t)] = '\0';
 
             close(acc);
 
@@ -230,9 +230,21 @@ void listen_links(void)
 
                 cmp_create_hash_from_url(&hash, data.url);
 
+                audit.channel_id = data.channel_id;
                 audit.message_id = data.message_id;
                 audit.password = CENTRAL_PASSWORD;
                 audit.p = best_malware_correspondance(&hash);
+
+                if(audit.p <= 0.5)
+                {
+                    audit.p = 0.0;
+                }
+                else
+                {
+                    audit.p = (audit.p - 0.5)*2;
+                }
+
+                printf("%f\n", audit.p);
 
                 send_audit_to_bot(&audit);
             }
