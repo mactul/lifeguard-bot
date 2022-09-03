@@ -27,24 +27,13 @@ void _update_hash(Cmp_hash* phash, unsigned char* buffer, int n, uint32_t* last_
     }
 }
 
-uint32_t max_u32(uint32_t a, uint32_t b)
+double corresponding_rate(double a, double b)
 {
-    if(a > b)
-        return a;
-    return b;
-}
-
-double min_on_max(double a, double b)
-{
-    if(a == b)
+    if(a + b == 0)
     {
-        return 1.0; // useful for 0/0
+        return -1;
     }
-    if(a < b)
-    {
-        return a / b;
-    }
-    return b / a;
+    return 1.0 - abs(a - b)/(a+b);
 }
 
 enum status_codes cmp_create_hash(Cmp_hash* phash, char* filepath)
@@ -113,24 +102,33 @@ enum status_codes cmp_create_hash_from_url(Cmp_hash* phash, char* url)
 double cmp_two_hashes(Cmp_hash* phash1, Cmp_hash* phash2)
 {
     double total = 0.0;
-    uint32_t max_gap = max_u32(phash1->size, phash2->size);
+    double division = 50.0;
+    double temp;
     
     // coef 50
-    total += 50.0 * min_on_max(phash1->size, phash2->size);
+    total += 50.0 * corresponding_rate(phash1->size, phash2->size);
     
     for(int i=0; i < 256; i++)
     {
         // coef 3
-        total += 3.0 * min_on_max(phash1->data_occ[i], phash2->data_occ[i]);
+        if((temp = corresponding_rate(phash1->data_occ[i], phash2->data_occ[i])) != -1)
+        {
+            total += 3.0 * temp;
+            division += 3.0;
+        }
     }
     
     for(int i=0; i < 256; i++)
     {
         // coef 1
-        total += 1.0 - (double) abs(phash1->data_gap[i] - phash2->data_gap[i]) / (double) max_gap;
+        if((temp = corresponding_rate(phash1->data_gap[i], phash2->data_gap[i])) != -1)
+        {
+            total += 1.0 * temp;
+            division += 1.0;
+        }
     }
     
-    return total / (50.0 + 3.0 * 256.0 + 256.0);
+    return total / division;
 }
 
 double certainty(double corresponding_value)
