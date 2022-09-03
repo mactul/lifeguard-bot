@@ -6,6 +6,7 @@ from struct import unpack
 from connexion_data import *
 from central_credentials import *
 from discord_credentials import TOKEN
+import traceback
 
 GREEN = 0x05f776
 ORANGE = 0xff7700
@@ -37,13 +38,21 @@ async def handle_audit_response(reader, writer):
     await message.reply(embed=embed)
 
 async def audit_server():
-    server = await asyncio.start_server(handle_audit_response, BOT_IP, AUDIT_PORT)
-    
-    addrs = ', '.join(str(sock.getsockname()) for sock in server.sockets)
-    print(f'Serving on {addrs}')
+    while True:
+        try:
+            server = await asyncio.start_server(handle_audit_response, BOT_IP, AUDIT_PORT)
+            
+            addrs = ', '.join(str(sock.getsockname()) for sock in server.sockets)
+            print(f'Serving on {addrs}')
 
-    async with server:
-        await server.serve_forever()
+            async with server:
+                await server.serve_forever()
+        except Exception as e:
+            file = open("python_server_logs.txt", "a")
+            traceback.print_exc(file=file)
+            file.close()
+            await asyncio.sleep(5)  # We have to wait a little bit before trying to reconnect
+        
 
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
@@ -54,21 +63,25 @@ async def on_message(message:discord.Message):
         return
         
     for attachment in message.attachments:
-        print(attachment.url)
-        reader, writer = await asyncio.open_connection(CENTRAL_IP, UNKNOWN_LINKS_PORT)
-        
-        writer.write(build_links_data(1, CENTRAL_PASSWORD, message.channel.id, message.id, attachment.url))
-        await writer.drain()
+        try:
+            reader, writer = await asyncio.open_connection(CENTRAL_IP, UNKNOWN_LINKS_PORT)
+            
+            writer.write(build_links_data(1, CENTRAL_PASSWORD, message.channel.id, message.id, attachment.url))
+            await writer.drain()
 
-        data = await reader.read(1)
+            data = await reader.read(1)
 
-        if len(data) == 1 and data[0] == TRANSFERT_OK:
-            print("data sended succesfuly")
-        else:
-            print("connexion interrupted before the end of the transfert")
-        
-        writer.close()
-        await writer.wait_closed()
+            if len(data) == 1 and data[0] == TRANSFERT_OK:
+                print("data sended succesfuly")
+            else:
+                print("connexion interrupted before the end of the transfert")
+            
+            writer.close()
+            await writer.wait_closed()
+        except Exception as e:
+            file = open("python_server_logs.txt", "a")
+            traceback.print_exc(file=file)
+            file.close()
     
 
 

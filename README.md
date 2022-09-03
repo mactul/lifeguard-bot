@@ -6,7 +6,8 @@ Do not use this bot now, it's not finished, it returns A LOT of false positives.
 
 ## TODO list
 
-- investigate the bug that makes lifeguard-bot.py stop working after a while, while still being online.
+- ~~investigate the bug that makes lifeguard-bot.py stop working after a while, while still being online.~~ DONE
+- add an exception for images analysis
 - change db2.bin to a sorted one and use dichotomial search by size to found the best malware correspondance.
 - add scrapping_unit.py program
 - change queue.c to handle priority numbers
