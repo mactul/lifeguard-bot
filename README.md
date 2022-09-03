@@ -2,7 +2,9 @@
 
 Lifeguard-bot is a security discord bot, scanning links and files for potential viruses.
 
-Do not use this bot now, it's not finished, it returns A LOT of false positives.
+```diff
+- Do not use this bot now, it's not finished, it returns A LOT of false positives.
+```
 
 ## TODO list
 
