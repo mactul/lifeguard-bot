@@ -14,8 +14,7 @@
 #define TRANSFERT_ERROR 2
 
 enum what {
-    READY,
-    REQUEST_DB
+    READY
 };
 
 typedef struct __attribute__((__packed__)) links_data {
@@ -30,7 +29,7 @@ typedef struct __attribute__((__packed__)) links_data {
 typedef struct __attribute__((__packed__)) conn_infos {
     char what;
     uint64_t password;
-    uint64_t port_or_dbpos;
+    uint64_t port;
     uint64_t ip;
 } Conn_infos;
 

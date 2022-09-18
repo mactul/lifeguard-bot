@@ -193,9 +193,11 @@ void* unknown_links_gestion(void* arg)
                 {
                     // it's a website
                 }
-                else
+                else if(strcmp(extension, ".png") != 0 && strcmp(extension, ".jpg") != 0
+                    && strcmp(extension, ".jpeg") != 0 && strcmp(extension, ".bmp") != 0
+                    && strcmp(extension, ".webp") != 0 && strcmp(extension, ".gif") != 0)
                 {
-                    // it's a file
+                    // it's a file and not an image
                     queue_add_links(&v_checkers_links_queue, &data, &links_mutex);
                     sem_post(&v_links_sem);
                 }
@@ -260,36 +262,8 @@ void* conn_infos_gestion(void* arg)
             {
                 switch(infos_data.what)
                 {
-                    case REQUEST_DB: ;
-                        FILE* fptr;
-                        Cmp_hash hash;
-                        char returned;
-
-                        if ((fptr = fopen("db.bin","rb")) == NULL)
-                        {
-                            printf("Error! opening file");
-                            return NULL;
-                        }
-                        fseek(fptr, infos_data.port_or_dbpos, SEEK_SET);
-                        while(get_next_malware_hash(&hash, fptr))
-                        {
-                            returned = TRANSFERT_ERROR;
-                            if(hash.size != 0)
-                            {
-                                while(returned != TRANSFERT_OK)
-                                {
-                                    send(acc, &hash, sizeof(hash), 0);
-                                    recv(acc, &returned, sizeof(char), 0);
-                                }
-                            }
-                        }
-                        hash.size = 0;
-                        send(acc, &hash, sizeof(hash), 0);
-
-                        fclose(fptr);
-                        break;
                     case READY:
-                        queue_add_server(&v_checkers_servers_queue, infos_data.ip, infos_data.port_or_dbpos, &server_mutex);
+                        queue_add_server(&v_checkers_servers_queue, infos_data.ip, infos_data.port, &server_mutex);
                         sem_post(&v_server_sem);
                         break;
                     default:

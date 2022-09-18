@@ -4,6 +4,17 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <mysql.h>
+#include "db_credentials.h"
+
+
+void finish_with_error(MYSQL* con)
+{
+  fprintf(stderr, "%s\n", mysql_error(con));
+  mysql_close(con);
+  //exit(1);
+}
+
 
 int is_regular_file(const char *path)
 {
@@ -12,7 +23,61 @@ int is_regular_file(const char *path)
     return S_ISREG(path_stat.st_mode);
 }
 
-char get_next_malware_hash(Cmp_hash* phash, FILE* fptr)
+char get_next_malware_hash(Cmp_hash* phash, MYSQL_RES *result)
+{
+    MYSQL_ROW row;
+    row = mysql_fetch_row(result);
+    if(row == NULL)
+    {
+        return 0;
+    }
+    memcpy(phash, row[0], sizeof(Cmp_hash));
+    return 1;
+}
+
+
+double best_malware_correspondance(Cmp_hash* phash)
+{
+    Cmp_hash current_hash;
+    double correspondance = 0.0;
+    double max_corr = 0.0;
+    char query[256];
+
+    MYSQL* con = mysql_init(NULL);
+
+    if (mysql_real_connect(con, DB_HOST, DB_LOGIN, DB_PASSWORD,
+          DB_NAME, 0, NULL, 0) == NULL)
+    {
+        finish_with_error(con);
+        return 0.0;
+    }
+
+    sprintf(query, "SELECT hash FROM virus WHERE size >= %llu AND size <= %llu", (uint64_t) (0.9 * (double)phash->size), (uint64_t) (1.1 * (double)phash->size));
+
+    if (mysql_query(con, query))
+    {
+        finish_with_error(con);
+        return 0.0;
+    }
+    
+    MYSQL_RES *result = mysql_store_result(con);
+    
+    while(get_next_malware_hash(&current_hash, result) && max_corr != 1.0)
+    {
+        correspondance = cmp_two_hashes(phash, &current_hash);
+        printf("%f\n", correspondance);
+        if(correspondance > max_corr)
+        {
+            max_corr = correspondance;
+        }
+    }
+    mysql_free_result(result);
+    mysql_close(con);
+
+    return certainty(max_corr);
+}
+
+char read_next_hash_in_file(Cmp_hash* phash, FILE* fptr)
 {
     int n = fread(phash, 1, sizeof(Cmp_hash), fptr);
     if(n != sizeof(Cmp_hash) && n != 0)
@@ -20,89 +85,57 @@ char get_next_malware_hash(Cmp_hash* phash, FILE* fptr)
     return !feof(fptr);
 }
 
-double best_malware_correspondance(Cmp_hash* phash)
+void convert_old_db(void)
 {
     Cmp_hash current_hash;
     FILE* fptr;
-    double correspondance = 0.0;
-    double max_corr = 0.0;
-    int counter = 0;
+    MYSQL *con = mysql_init(NULL);
+
+    if (mysql_real_connect(con, DB_HOST, DB_LOGIN, DB_PASSWORD,
+          DB_NAME, 0, NULL, 0) == NULL)
+    {
+        finish_with_error(con);
+        return;
+    }
 
     if ((fptr = fopen(DB_FILE_NAME,"rb")) == NULL)
     {
         printf("Error! opening file");
-        return 0.0;
+        return;
     }
-    while(get_next_malware_hash(&current_hash, fptr) && max_corr != 1.0)
+    while(read_next_hash_in_file(&current_hash, fptr))
     {
-        correspondance = cmp_two_hashes(phash, &current_hash);
-        if(correspondance > max_corr)
+        if(check_hash_integrity(&current_hash))
         {
-            max_corr = correspondance;
+            char chunk[2*sizeof(Cmp_hash)+1];
+            mysql_real_escape_string(con, chunk, (char*)&current_hash, sizeof(Cmp_hash));
+            char *st = "INSERT INTO virus(size, hash) VALUES('%d', '%s')";
+            size_t st_len = strlen(st);
+
+            char query[st_len + 2*sizeof(Cmp_hash)+1];
+            int len = snprintf(query, st_len + 2*sizeof(Cmp_hash)+1, st, current_hash.size, chunk);
+
+            if (mysql_real_query(con, query, len))
+            {
+                fprintf(stderr, "%s\n", mysql_error(con));
+            }
         }
-        counter++;
     }
+    mysql_close(con);
     fclose(fptr);
-
-    return certainty(max_corr);
 }
 
 
-int64_t check_db_integrity()
-{
-    FILE* fptr;
-    Cmp_hash hash;
-    char integrity = 1;
-    char result;
-
-    if(access(DB_FILE_NAME, F_OK) != 0)
-    {
-        // file not exists, so DB has integrity
-        return DB_INTEGRITY;
-    }
-
-    if ((fptr = fopen(DB_FILE_NAME,"rb")) == NULL)
-    {
-        printf("Error! opening file");
-        return 0;
-    }
-
-    while((result = get_next_malware_hash(&hash, fptr)) && result != -1 && (integrity = check_hash_integrity(&hash)))
-    {
-        ;
-    }
-    if(integrity && result != -1)
-    {
-        fclose(fptr);
-        return DB_INTEGRITY;
-    }
-    else
-    {
-        int64_t size = 2052 * (int64_t)(ftell(fptr)/2052) - sizeof(Cmp_hash);
-        if(size < 0)
-            size = 0;
-        
-        fclose(fptr);
-        return size;
-    }
-}
-
-void add_db_from_folder(char* folder_path, char check_if_exists)
+void add_db_from_folder(char* folder_path)
 {
     DIR *d;
     struct dirent *dir;
-    FILE *fptr;
-    int64_t integrity;
+    MYSQL *con = mysql_init(NULL);
 
-    if((integrity = check_db_integrity()) != DB_INTEGRITY)
+    if (mysql_real_connect(con, DB_HOST, DB_LOGIN, DB_PASSWORD,
+          DB_NAME, 0, NULL, 0) == NULL)
     {
-        printf("%d\n", integrity);
-        truncate(DB_FILE_NAME, integrity);
-    }
-
-    if ((fptr = fopen(DB_FILE_NAME,"ab")) == NULL)
-    {
-        printf("Error! opening file");
+        finish_with_error(con);
         return;
     }
     
@@ -121,8 +154,21 @@ void add_db_from_folder(char* folder_path, char check_if_exists)
                 Cmp_hash hash;
                 if(cmp_create_hash(&hash, path) == OK && hash.size != 0)
                 {
-                    if(!check_if_exists || best_malware_correspondance(&hash) != 1.0)
-                        fwrite(&hash, sizeof(hash), 1, fptr);
+                    if(check_hash_integrity(&hash))
+                    {
+                        char chunk[2*sizeof(Cmp_hash)+1];
+                        mysql_real_escape_string(con, chunk, (char*)&hash, sizeof(Cmp_hash));
+                        char *st = "INSERT INTO virus(size, hash) VALUES('%d', '%s')";
+                        size_t st_len = strlen(st);
+
+                        char query[st_len + 2*sizeof(Cmp_hash)+1];
+                        int len = snprintf(query, st_len + 2*sizeof(Cmp_hash)+1, st, hash.size, chunk);
+
+                        if (mysql_real_query(con, query, len))
+                        {
+                            fprintf(stderr, "%s\n", mysql_error(con));
+                        }
+                    }
                     remove(path); // delete the file
                     counter++;
                     printf("%d\n", counter);
@@ -130,6 +176,6 @@ void add_db_from_folder(char* folder_path, char check_if_exists)
             }
         }
         closedir(d);
-        fclose(fptr);
+        mysql_close(con);
     }
 }

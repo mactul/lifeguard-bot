@@ -9,8 +9,8 @@ Lifeguard-bot is a security discord bot, scanning links and files for potential 
 ## TODO list
 
 - ~~investigate the bug that makes lifeguard-bot.py stop working after a while, while still being online.~~ DONE
-- add an exception for images analysis
-- change db2.bin to a sorted one and use dichotomial search by size to found the best malware correspondance.
+- ~~add an exception for images analysis~~ DONE
+- ~~change the database system by a most flexible one~~ DONE
 - add scrapping_unit.py program
 - change queue.c to handle priority numbers
 - add a virustotal verification to reduce false positive
