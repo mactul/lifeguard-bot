@@ -1,5 +1,5 @@
 #define MAX_URI_LENGTH  1024 /* this can be changed, it's the maximum length a url can have */
-#define MAX_CONNECTIONS 20   /* this can be changed, it represents the maximum of handlers can be created */
+
 
 enum errors {
     ERROR_MAX_CONNECTIONS = -1,
@@ -7,21 +7,21 @@ enum errors {
     ERROR_HOST_CONNECTION = -3,
     ERROR_WRITE = -4,
     ERROR_PROTOCOL = -5,
-    ERROR_MALLOC = -6
+    ERROR_MALLOC = -6,
+    UNABLE_TO_BUILD_SOCKET = -7
 };
 
-typedef int Handler;
+typedef struct requests_handler RequestsHandler;
 
-Handler http_request(char* hostname, char* headers);
-Handler https_request(char* hostname, char* headers);
-Handler request(char* method, char* url, char* data, char* headers);
-Handler post(char* url, char* data, char* headers);
-Handler get(char* url, char* headers);
-Handler delete(char* url, char* headers);
-Handler patch(char* url, char* data, char* additional_headers);
-Handler put(char* url, char* data, char* additional_headers);
-int read_output(Handler handler, unsigned char* buffer, int buffer_size);
-int read_output_body(Handler handler, unsigned char* buffer, int buffer_size);
-void close_connection(Handler handler);
-void int_to_string(int n, char s[]);
-void reverse_string(char s[]);
+void req_init(void);
+void req_cleanup(void);
+int req_get_last_error(void);
+RequestsHandler* req_request(char* method, char* url, char* data, char* additional_headers);
+RequestsHandler* req_get(char* url, char* additional_headers);
+RequestsHandler* req_post(char* url, char* data, char* additional_headers);
+RequestsHandler* req_delete(RequestsHandler* handler, char* url, char* additional_headers);
+RequestsHandler* req_patch(RequestsHandler* handler, char* url, char* data, char* additional_headers);
+RequestsHandler* req_put(RequestsHandler* handler, char* url, char* data, char* additional_headers);
+int req_read_output(RequestsHandler* handler, char* buffer, int buffer_size);
+int req_read_output_body(RequestsHandler* handler, char* buffer, int buffer_size);
+void req_close_connection(RequestsHandler** ppr);

@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <mysql.h>
+#include <mysql/mysql.h>
 #include "db_credentials.h"
 
 
@@ -65,7 +65,6 @@ double best_malware_correspondance(Cmp_hash* phash)
     while(get_next_malware_hash(&current_hash, result) && max_corr != 1.0)
     {
         correspondance = cmp_two_hashes(phash, &current_hash);
-        printf("%f\n", correspondance);
         if(correspondance > max_corr)
         {
             max_corr = correspondance;

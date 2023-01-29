@@ -1,7 +1,7 @@
 #include "connexion_data.h"
 
 typedef struct serverqueue_el {
-    uint64_t ip;
+    char ip[22];
     uint64_t port;
 
     struct serverqueue_el* newer;
@@ -23,7 +23,7 @@ typedef struct linksqueue {
     LinksQueue_el* last;
 } LinksQueue;
 
-void queue_add_server(ServerQueue* pqueue, uint64_t ip, uint64_t port, pthread_mutex_t* pmutex);
+void queue_add_server(ServerQueue* pqueue, char* ip, uint64_t port, pthread_mutex_t* pmutex);
 char queue_next_server(ServerQueue* pqueue, ServerQueue_el* pel, pthread_mutex_t* pmutex);
 
 void queue_add_links(LinksQueue* pqueue, Links_data* data, pthread_mutex_t* pmutex);

@@ -7,16 +7,31 @@ from connexion_data import *
 from central_credentials import *
 from discord_credentials import TOKEN
 import traceback
+import ssl
 
 GREEN = 0x05f776
 ORANGE = 0xff7700
 RED = 0xff0000
 
+
+LITTLE_ENDIAN = bytes(ctypes.c_short(1))[0] == 1
+
+def to_big_endian(b_array):
+    if LITTLE_ENDIAN:
+        return bytes(reversed(b_array))
+    return b_array
+
 def build_links_data(priority, password, channel_id, message_id, url):
-    return bytes([priority])+bytes(ctypes.c_uint64(password))+bytes(ctypes.c_uint64(channel_id))+bytes(ctypes.c_uint64(message_id))+bytes(url, 'ascii')+bytes([0])
+    bytes(reversed(bytes(ctypes.c_uint64(12))))
+    return bytes([priority])+to_big_endian(bytes(ctypes.c_uint64(password)))+to_big_endian(bytes(ctypes.c_uint64(channel_id)))+to_big_endian(bytes(ctypes.c_uint64(message_id)))+bytes(url, 'ascii')+bytes([0])
 
 def decode_audit_data(audit):
-    return unpack('QQQd', audit)
+    channel_id, message_id, password, p = unpack('QQQd', audit)
+    channel_id = bytes(ctypes.c_uint64(channel_id))
+    message_id = bytes(ctypes.c_uint64(message_id))
+    password = bytes(ctypes.c_uint64(password))
+    
+    return int.from_bytes(channel_id, "big"), int.from_bytes(message_id, "big"), int.from_bytes(password, "big"), p
 
 
 async def handle_audit_response(reader, writer):
@@ -63,8 +78,12 @@ async def on_message(message:discord.Message):
         return
         
     for attachment in message.attachments:
+        print(attachment)
         try:
-            reader, writer = await asyncio.open_connection(CENTRAL_IP, UNKNOWN_LINKS_PORT)
+            ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ssl_ctx.check_hostname = False
+            ssl_ctx.verify_mode = ssl.CERT_NONE
+            reader, writer = await asyncio.open_connection(CENTRAL_IP, UNKNOWN_LINKS_PORT, ssl=ssl_ctx)
             
             writer.write(build_links_data(1, CENTRAL_PASSWORD, message.channel.id, message.id, attachment.url))
             await writer.drain()

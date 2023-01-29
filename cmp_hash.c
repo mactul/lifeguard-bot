@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <errno.h>
 #include "cmp_hash.h"
 #include "requests.h"
 
@@ -41,8 +42,8 @@ enum status_codes cmp_create_hash(Cmp_hash* phash, char* filepath)
     FILE* file;
     unsigned char buffer[BUFFER_SIZE+1];
     int n = BUFFER_SIZE;
-    uint32_t last_viewed[256] = {};
-    uint32_t max_gap[256] = {};
+    uint32_t last_viewed[256] = {0};
+    uint32_t max_gap[256] = {0};
     uint32_t index = 0;
     
     memset(phash, 0, sizeof(Cmp_hash));
@@ -71,30 +72,45 @@ enum status_codes cmp_create_hash(Cmp_hash* phash, char* filepath)
 
 enum status_codes cmp_create_hash_from_url(Cmp_hash* phash, char* url)
 {
-    Handler hanlder;
+    RequestsHandler* handler;
     unsigned char buffer[BUFFER_SIZE+1];
     int n = BUFFER_SIZE;
-    uint32_t last_viewed[256] = {};
-    uint32_t max_gap[256] = {};
+    uint32_t last_viewed[256] = {0};
+    uint32_t max_gap[256] = {0};
     uint32_t index = 0;
 
     memset(phash, 0, sizeof(Cmp_hash));
 
-    hanlder = get(url, "");
+    handler = req_get(url, "");
+
+    if(handler == NULL)
+    {
+        printf("%d\n", req_get_last_error());
+        return UNKNOW_ERROR;
+    }
 
     while(phash->size < MAX_U32 && n > 0)
     {
-        n = read_output_body(hanlder, buffer, BUFFER_SIZE);
+        errno = 0;
+        n = req_read_output_body(handler, (char*)buffer, BUFFER_SIZE);
         
-        // We just look at the first 4 GB, beyond that the uint32_t are too small
-        if(phash->size + n <= MAX_U32)
-            _update_hash(phash, buffer, n, last_viewed, max_gap, index);
-        
-        phash->size += n;
-        index += n;
+        if(n > 0)
+        {
+            // We just look at the first 4 GB, beyond that the uint32_t are too small
+            if(phash->size + n <= MAX_U32)
+                _update_hash(phash, buffer, n, last_viewed, max_gap, index);
+            
+            phash->size += n;
+            index += n;
+        }
+        else
+        {
+            printf("%d\n", phash->size);
+            perror("");
+        }
     }
 
-    close_connection(hanlder);
+    req_close_connection(&handler);
 
     return OK;
 }

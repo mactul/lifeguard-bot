@@ -1,14 +1,15 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <pthread.h>
+#include <string.h>
 #include "queue.h"
 
-void queue_add_server(ServerQueue* pqueue, uint64_t ip, uint64_t port, pthread_mutex_t* pmutex)
+void queue_add_server(ServerQueue* pqueue, char* ip, uint64_t port, pthread_mutex_t* pmutex)
 {
     ServerQueue_el* pel;
 
     pel = (ServerQueue_el*) malloc(sizeof(ServerQueue_el));
-    pel->ip = ip;
+    strcpy(pel->ip, ip);
     pel->port = port;
     pel->newer = NULL;
 
@@ -36,7 +37,7 @@ char queue_next_server(ServerQueue* pqueue, ServerQueue_el* pel, pthread_mutex_t
         pthread_mutex_unlock(pmutex);
         return 0;
     }
-    pel->ip = pqueue->last->ip;
+    strcpy(pel->ip, pqueue->last->ip);
     pel->port = pqueue->last->port;
 
     ptemp = pqueue->last->newer;

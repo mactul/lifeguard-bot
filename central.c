@@ -1,17 +1,21 @@
 #include <stdio.h>
-#include <netdb.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/un.h>
 #include <pthread.h>
 #include <errno.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
 #include <semaphore.h>
+#include <stdint.h>
+#include <string.h>
+#include "easy_tcp_tls.h"
 #include "central_credentials.h"
 #include "database.h"
 #include "queue.h"
+
+
+/***********************************************************/
+/* /!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\  */
+/* Do not forget to fix the little-endian/big-endian issue */
+/* /!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\  */
+/***********************************************************/
 
 #define DISCORD_ATTACHMENTS_START "https://cdn.discordapp.com/attachments/"
 
@@ -61,40 +65,21 @@ void get_extension(char* url, char* extension)
 
 char send_to_v_checker(ServerQueue_el* v_checker_addr, Links_data* pdata)
 {
-    struct sockaddr_in my_addr;
-    int client = socket(AF_INET, SOCK_STREAM, 0);
-
-    if (client < 0)
+    SocketHandler* client;
+    
+    client = socket_ssl_client_init(v_checker_addr->ip, v_checker_addr->port, NULL);
+    if(client == NULL)
     {
-        printf("Error in client creating\n");
+        socket_print_last_error();
         return 0;
     }
-    else
-    {
-        printf("Client Created\n");
-    }
+    pdata->channel_id = socket_ntoh64(pdata->channel_id);
+    pdata->message_id = socket_ntoh64(pdata->message_id);
+    pdata->password = socket_ntoh64(pdata->password);
 
-    my_addr.sin_family = AF_INET;
-    my_addr.sin_addr.s_addr = INADDR_ANY;
-    my_addr.sin_port = v_checker_addr->port;
-    
-    // This ip address is the server ip address
-    my_addr.sin_addr.s_addr = v_checker_addr->ip;
-    
-    socklen_t addr_size = sizeof my_addr;
-    int con = connect(client, (struct sockaddr*) &my_addr, sizeof my_addr);
-    if (con == 0)
-    {
-        printf("Client Connected\n");
-    }
-    else
-    {
-        printf("Error in Connection\n");
-        return 0;
-    }
-    
-    
-    send(client, pdata, sizeof(Links_data), 0);  // send the data to the server
+    socket_send(client, (char*)pdata, sizeof(Links_data), 0);  // send the data to the server
+
+    socket_close(&client);
 
     return 1;
 }
@@ -114,7 +99,7 @@ void* links_attribution(void* arg)
 
         if(!send_to_v_checker(&server_el, &(links_el.data)))
         {
-            //echec
+            // echec
             queue_add_links(&v_checkers_links_queue, &(links_el.data), &links_mutex);
             sem_post(&v_links_sem);
         }
@@ -123,62 +108,35 @@ void* links_attribution(void* arg)
 
 void* unknown_links_gestion(void* arg)
 {
-    int server = socket(AF_INET, SOCK_STREAM, 0);
-    struct timeval tv;
+    SocketHandler* server;
 
-    struct sockaddr_in my_addr, peer_addr;
-    my_addr.sin_family = AF_INET;
-    my_addr.sin_addr.s_addr = INADDR_ANY;
-    
-    my_addr.sin_addr.s_addr = inet_addr(CENTRAL_IP);
-    my_addr.sin_port = htons(UNKNOWN_LINKS_PORT);
+    server = socket_ssl_server_init(CENTRAL_IP, UNKNOWN_LINKS_PORT, 1, "cert.pem", "key.pem");
 
-    tv.tv_sec = 60;
-    tv.tv_usec = 0;
-    setsockopt(server, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
- 
-    if (bind(server, (struct sockaddr*) &my_addr, sizeof(my_addr)) == 0)
-        printf("Binded Correctly\n");
-    else
-        printf("Unable to bind\n");
-         
-    if (listen(server, 1) == 0)
+    if(server == NULL)
     {
-        printf("Listening ...\n");
+        socket_print_last_error();
+        return NULL;
     }
-    else
-        printf("Unable to listen\n");
-
-    socklen_t addr_size;
-    addr_size = sizeof(struct sockaddr_in);
 
     while (1)
     {
-        int acc = accept(server, (struct sockaddr*) &peer_addr, &addr_size);
-        if(acc != -1)
+        SocketHandler* client = socket_accept(server, NULL);
+        if(client != NULL)
         {
-            int n;
             Links_data data;
             char extension[MAX_EXTENSION_SIZE];
             char returned = TRANSFERT_OK;
 
-            printf("%d\n", acc);
-            
-            printf("Connection Established\n");
-            char ip[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &(peer_addr.sin_addr), ip, INET_ADDRSTRLEN);
-        
-            // "ntohs(peer_addr.sin_port)" function is
-            // for finding port number of client
-            printf("\tIP   : %s\n\tPORT : %d\n", ip, ntohs(peer_addr.sin_port));
+            socket_recv(client, (char*)&data, sizeof(data), 0);
+            data.password = socket_ntoh64(data.password);
+            data.channel_id = socket_ntoh64(data.channel_id);
+            data.message_id = socket_ntoh64(data.message_id);
 
-            n = recv(acc, &data, sizeof(data), 0);
-            printf("%d\n", n);
-            //data.url[n-sizeof(char)-3*sizeof(uint64_t)] = '\0';
+            printf("%d %llu\n", data.priority, data.password);
 
             if(data.password == CENTRAL_PASSWORD)
             {
-                printf("\n%d %d %llu %llu %s\n", sizeof(data), data.priority, data.channel_id, data.message_id, data.url);
+                printf("\n%llu %d %llu %llu %s\n", sizeof(data), data.priority, data.channel_id, data.message_id, data.url);
 
                 get_extension(data.url, extension);
 
@@ -202,61 +160,41 @@ void* unknown_links_gestion(void* arg)
                     sem_post(&v_links_sem);
                 }
 
-                send(acc, &returned, sizeof(char), 0);
+                socket_send(client, &returned, sizeof(char), 0);
             }
 
-            close(acc);
+            socket_close(&client);
+        }
+        else
+        {
+            socket_print_last_error();
         }
     }
 }
 
 void* conn_infos_gestion(void* arg)
 {
-    int server = socket(AF_INET, SOCK_STREAM, 0);
-    struct timeval tv;
+    SocketHandler* server = socket_ssl_server_init(CENTRAL_IP, INFOS_PORT, 1, "cert.pem", "key.pem");
 
-    struct sockaddr_in my_addr, peer_addr;
-    my_addr.sin_family = AF_INET;
-    my_addr.sin_addr.s_addr = INADDR_ANY;
-    
-    my_addr.sin_addr.s_addr = inet_addr(CENTRAL_IP);
-    my_addr.sin_port = htons(INFOS_PORT);
-
-    tv.tv_sec = 60;
-    tv.tv_usec = 0;
-    setsockopt(server, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
- 
-    if (bind(server, (struct sockaddr*) &my_addr, sizeof(my_addr)) == 0)
-        printf("Binded Correctly\n");
-    else
-        printf("Unable to bind\n");
-         
-    if (listen(server, 3) == 0)
+    if(server == NULL)
     {
-        printf("Listening ...\n");
+        socket_print_last_error();
+        return NULL;
     }
-    else
-        printf("Unable to listen\n");
-
-    socklen_t addr_size;
-    addr_size = sizeof(struct sockaddr_in);
 
     while (1)
     {
-        int acc = accept(server, (struct sockaddr*) &peer_addr, &addr_size);
-        if(acc != -1)
+        SocketHandler* client = socket_accept(server, NULL);
+        if(client != NULL)
         {
             Conn_infos infos_data;
-            
-            printf("Connection Established\n");
-            char ip[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &(peer_addr.sin_addr), ip, INET_ADDRSTRLEN);
-        
-            // "ntohs(peer_addr.sin_port)" function is
-            // for finding port number of client
-            printf("\tIP   : %s\n\tPORT : %d\n", ip, ntohs(peer_addr.sin_port));
 
-            recv(acc, &infos_data, sizeof(infos_data), 0);
+            socket_recv(client, (char*)(&infos_data), sizeof(infos_data), 0);
+
+            infos_data.password = socket_ntoh64(infos_data.password);
+            infos_data.port = socket_ntoh64(infos_data.port);
+
+            printf("%llu %llu\n", infos_data.password, infos_data.port);
 
             if(infos_data.password == CENTRAL_PASSWORD)
             {
@@ -271,7 +209,11 @@ void* conn_infos_gestion(void* arg)
                 }
             }
 
-            close(acc);
+            socket_close(&client);
+        }
+        else
+        {
+            socket_print_last_error();
         }
     }
 }
@@ -288,6 +230,8 @@ int main()
     v_checkers_links_queue.first = NULL;
     v_checkers_links_queue.last = NULL;
 
+    socket_start();
+
     sem_init(&v_server_sem, 0, 0);
     sem_init(&v_links_sem, 0, 0);
     
@@ -298,4 +242,6 @@ int main()
     pthread_create(&links_attribution_thread, NULL, *links_attribution, NULL);
 
     pthread_join(unknown_links_thread, NULL); // infinite loop in thread
+
+    socket_cleanup();
 }

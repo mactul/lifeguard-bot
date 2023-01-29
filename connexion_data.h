@@ -1,4 +1,3 @@
-#include <stdint.h>
 
 #define CENTRAL_IP "127.0.0.1"
 #define BOT_IP "127.0.0.1"
@@ -30,7 +29,7 @@ typedef struct __attribute__((__packed__)) conn_infos {
     char what;
     uint64_t password;
     uint64_t port;
-    uint64_t ip;
+    char ip[22];
 } Conn_infos;
 
 typedef struct __attribute__((__packed__)) audit {

@@ -1,151 +1,87 @@
 #include <stdio.h>
-#include <netdb.h>
+#include <stdint.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/un.h>
-#include <sys/ioctl.h>
+#include <string.h>
 #include <errno.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <net/if.h>
-#include <sys/socket.h>
+#include <sys/stat.h>
+#include "easy_tcp_tls.h"
 #include "database.h"
 #include "connexion_data.h"
 #include "central_credentials.h"
-#include <sys/stat.h>
 
+// This will be replaced by argv or by an automatic algorithm
+#define MACHINE_IP "127.0.0.1"
+#define MACHINE_PORT 15792
 
-
-void send_ready(struct sockaddr_in addr)
+void send_ready(char* ip, uint64_t port)
 {
-    struct sockaddr_in my_addr;
-    int client = socket(AF_INET, SOCK_STREAM, 0);
-    
+    SocketHandler* client;
     Conn_infos info_data;
 
-
-    if (client < 0)
-        printf("Error in client creating\n");
-    else
-        printf("Client Created\n");
-         
-    my_addr.sin_family = AF_INET;
-    my_addr.sin_addr.s_addr = INADDR_ANY;
-    my_addr.sin_port = htons(INFOS_PORT);
+    client = socket_ssl_client_init(CENTRAL_IP, INFOS_PORT, NULL);
     
-    // This ip address is the server ip address
-    my_addr.sin_addr.s_addr = inet_addr(CENTRAL_IP);
-     
-    socklen_t addr_size = sizeof my_addr;
-    int con = connect(client, (struct sockaddr*) &my_addr, sizeof my_addr);
-    if (con == 0)
-        printf("Client Connected\n");
-    else
-        printf("Error in Connection\n");
-    
-
+    if(client == NULL)
+    {
+        socket_print_last_error();
+        return;
+    }
     info_data.what = READY;
-    info_data.password = CENTRAL_PASSWORD;
-    info_data.port = addr.sin_port;
-    info_data.ip = addr.sin_addr.s_addr;
+    info_data.password = socket_ntoh64(CENTRAL_PASSWORD);
+    info_data.port = socket_ntoh64(port);
+    strcpy(info_data.ip, ip);
     
-    send(client, &info_data, sizeof(info_data), 0);  // send the data to the server
+    socket_send(client, (char*)&info_data, sizeof(info_data), 0);  // send the data to the server
 
+    socket_close(&client);
 }
 
 void send_audit_to_bot(Audit* paudit)
 {
-    struct sockaddr_in my_addr;
-    int client = socket(AF_INET, SOCK_STREAM, 0);
-    
-    Conn_infos info_data;
+    SocketHandler* client;
 
+    client = socket_client_init(BOT_IP, AUDIT_PORT);
 
-    if (client < 0)
-        printf("Error in client creating\n");
-    else
-        printf("Client Created\n");
-         
-    my_addr.sin_family = AF_INET;
-    my_addr.sin_addr.s_addr = INADDR_ANY;
-    my_addr.sin_port = htons(AUDIT_PORT);
+    if(client == NULL)
+    {
+        socket_print_last_error();
+        return;
+    }
     
-    // This ip address is the server ip address
-    my_addr.sin_addr.s_addr = inet_addr(BOT_IP);
-     
-    socklen_t addr_size = sizeof my_addr;
-    int con = connect(client, (struct sockaddr*) &my_addr, sizeof my_addr);
-    if (con == 0)
-        printf("Client Connected\n");
-    else
-        printf("Error in Connection\n");
-    
-    
-    send(client, paudit, sizeof(Audit), 0);  // send the data to the server
+    socket_send(client, (char*)paudit, sizeof(Audit), 0);  // send the data to the server
 
+    socket_close(&client);
 }
 
 void listen_links(void)
 {
-    int server = socket(AF_INET, SOCK_STREAM, 0);
-    struct timeval tv;
-    struct ifreq ifr;
-    struct sockaddr_in my_addr, peer_addr;
-    my_addr.sin_family = AF_INET;
-    my_addr.sin_addr.s_addr = INADDR_ANY;
+    SocketHandler* server;
 
-    ifr.ifr_addr.sa_family = AF_INET;
-    strncpy(ifr.ifr_name, "eth0", IFNAMSIZ-1);
-    ioctl(server, SIOCGIFADDR, &ifr);
-    
-    my_addr.sin_addr.s_addr = inet_addr(inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
-    my_addr.sin_port = htons(0);  // any available port
+    server = socket_ssl_server_init(MACHINE_IP, MACHINE_PORT, 1, "cert.pem", "key.pem");
 
-    tv.tv_sec = 60;
-    tv.tv_usec = 0;
-    setsockopt(server, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
- 
-    if (bind(server, (struct sockaddr*) &my_addr, sizeof(my_addr)) == 0)
-        printf("Binded Correctly\n");
-    else
-        printf("Unable to bind\n");
-        
-    if (listen(server, 3) == 0)
+    if(server == NULL)
     {
-        printf("Listening ...\n");
+        socket_print_last_error();
+        return;
     }
-    else
-        printf("Unable to listen\n");
 
-    socklen_t addr_size;
-    addr_size = sizeof(struct sockaddr_in);
-
-    getsockname(server, (struct sockaddr*) &my_addr, &addr_size);
-
-    printf("%s %d\n", inet_ntoa(my_addr.sin_addr), ntohs(my_addr.sin_port));
-
-    send_ready(my_addr);
+    send_ready(MACHINE_IP, MACHINE_PORT);
 
     while (1)
     {
-        int n;
         Links_data data;
-        int acc = accept(server, (struct sockaddr*) &peer_addr, &addr_size);
-        if(acc != -1)
+        SocketHandler* client = socket_accept(server, NULL);
+        if(client != NULL)
         {
             Cmp_hash hash;
-            printf("Connection Established\n");
-            char ip[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &(peer_addr.sin_addr), ip, INET_ADDRSTRLEN);
-        
-            // "ntohs(peer_addr.sin_port)" function is
-            // for finding port number of client
-            printf("\tIP   : %s\n\tPORT : %d\n", ip, ntohs(peer_addr.sin_port));
-
-            n = recv(acc, &data, sizeof(data), 0);
+            
+            socket_recv(client, (char*)&data, sizeof(data), 0);
             //data.url[n-sizeof(char)-3*sizeof(uint64_t)] = '\0';
 
-            close(acc);
+            data.channel_id = socket_ntoh64(data.channel_id);
+            data.message_id = socket_ntoh64(data.message_id);
+            data.password = socket_ntoh64(data.password);
+
+            socket_close(&client);
 
             if(data.password == CENTRAL_PASSWORD)
             {
@@ -156,9 +92,9 @@ void listen_links(void)
 
                 printf("%d\n", hash.size);
 
-                audit.channel_id = data.channel_id;
-                audit.message_id = data.message_id;
-                audit.password = CENTRAL_PASSWORD;
+                audit.channel_id = socket_ntoh64(data.channel_id);
+                audit.message_id = socket_ntoh64(data.message_id);
+                audit.password = socket_ntoh64(CENTRAL_PASSWORD);
                 audit.p = best_malware_correspondance(&hash);
 
                 if(audit.p <= 0.5)
@@ -170,20 +106,28 @@ void listen_links(void)
                     audit.p = (audit.p - 0.5)*2;
                 }
 
-                printf("%f\n", audit.p);
+                printf("p: %f\n", audit.p);
 
                 send_audit_to_bot(&audit);
             }
 
 
-            send_ready(my_addr);
+            send_ready(MACHINE_IP, MACHINE_PORT);
+        }
+        else
+        {
+            socket_print_last_error();
         }
     }
 }
 
 int main()
 {
+    socket_start();
+
     listen_links();
+    
+    socket_cleanup();
     
     return 0;
 }
