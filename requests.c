@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #if defined(_WIN32) || defined(WIN32)
     #include <winsock2.h>
@@ -24,6 +25,7 @@
 #define MAX_CHAR_ON_HOST 253  /* this is exact, don't change */
 #define HEADERS_LENGTH   220  /* this is exact, don't change */
 
+#define CONTENT_LENGTH_STR "content-length"
 
 struct requests_handler {
     SocketHandler* handler;
@@ -157,7 +159,7 @@ RequestsHandler* req_request(char* method, char* url, char* data, char* addition
     {
         strcat(headers, "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36\r\n");
     }
-    if(stristr(additional_headers, "connection:") == -1)  // we don't want to have the same header two times
+    if(stristr(additional_headers, "connection") == -1)  // we don't want to have the same header two times
     {
         strcat(headers, "Connection: close\r\n");
     }
@@ -218,12 +220,57 @@ RequestsHandler* req_request(char* method, char* url, char* data, char* addition
     return handler;
 }
 
+uint64_t check_content_length(char c)
+{
+    static int i = 0;
+    static char length[255];
+
+    if(i >= 255 || (i < strlen(CONTENT_LENGTH_STR) && tolower(c) != CONTENT_LENGTH_STR[i]))
+    {
+        i = 0;
+        return 0;
+    }
+    if(c != '\r' && c != '\n')
+    {
+        length[i] = c;
+        i++;
+    }
+    else
+    {
+        length[i] = '\0';
+        i = 0;
+        char buffer[255];
+        int j = 0;
+        while(length[j] != '\0' && length[j] != ':')
+        {
+            j++;
+        }
+        while(length[j] != '\0' && (length[j] < '0' || length[j] > '9'))
+        {
+            j++;
+        }
+        int k = 0;
+        while(length[j] != '\0' && '0' <= length[j] && length[j] <= '9')
+        {
+            buffer[k] = length[j];
+            k++;
+            j++;
+        }
+        if(k != 0)
+        {
+            buffer[k] = '\0';
+            return atoll(buffer);
+        }
+    }
+    return 0;
+}
+
 /*
     Skip the response header and fill the buffer with the server response
     Returns the number of bytes readed
     Use this in a loop
 */
-int req_read_output_body(RequestsHandler* handler, char* buffer, int buffer_size)
+int req_read_output_body(RequestsHandler* handler, char* buffer, int buffer_size, uint64_t* total_bytes)
 {
     if(handler->headers_readed)
     {
@@ -239,6 +286,11 @@ int req_read_output_body(RequestsHandler* handler, char* buffer, int buffer_size
             int i = 0;
             while(i < size && (buffer[i] != '\n' || !c_return))
             {
+                int n = check_content_length(buffer[i]);
+                if(n != 0)
+                {
+                    *total_bytes = n;
+                }
                 if(buffer[i] == '\n')
                 {
                     c_return = 1;
@@ -279,7 +331,7 @@ void req_close_connection(RequestsHandler** ppr)
     {
         return;
     }
-    socket_close(&((*ppr)->handler));
+    socket_close(&((*ppr)->handler), 1);
     free(*ppr);
     *ppr = NULL;
 }

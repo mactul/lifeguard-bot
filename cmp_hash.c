@@ -78,10 +78,11 @@ enum status_codes cmp_create_hash_from_url(Cmp_hash* phash, char* url)
     uint32_t last_viewed[256] = {0};
     uint32_t max_gap[256] = {0};
     uint32_t index = 0;
+    uint64_t total_bytes = 1;
 
     memset(phash, 0, sizeof(Cmp_hash));
 
-    handler = req_get(url, "");
+    handler = req_get(url, "Connection: keep-alive\r\n");
 
     if(handler == NULL)
     {
@@ -89,13 +90,14 @@ enum status_codes cmp_create_hash_from_url(Cmp_hash* phash, char* url)
         return UNKNOW_ERROR;
     }
 
-    while(phash->size < MAX_U32 && n > 0)
+    while(phash->size < MAX_U32 && phash->size < total_bytes)
     {
         errno = 0;
-        n = req_read_output_body(handler, (char*)buffer, BUFFER_SIZE);
+        n = req_read_output_body(handler, (char*)buffer, BUFFER_SIZE, &total_bytes);
         
         if(n > 0)
         {
+            //printf("%s\n", buffer);
             // We just look at the first 4 GB, beyond that the uint32_t are too small
             if(phash->size + n <= MAX_U32)
                 _update_hash(phash, buffer, n, last_viewed, max_gap, index);
@@ -109,8 +111,10 @@ enum status_codes cmp_create_hash_from_url(Cmp_hash* phash, char* url)
             perror("");
         }
     }
-
+    printf("hash size: %d\n", phash->size);
+    printf("closing\n");
     req_close_connection(&handler);
+    printf("closed\n");
 
     return OK;
 }

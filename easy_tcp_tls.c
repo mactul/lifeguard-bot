@@ -132,14 +132,14 @@ SocketHandler* socket_ssl_client_init(const char* server_ip, uint16_t server_por
     if(client->ctx == NULL)
     {
         _error_code = SSL_CTX_CREATION_FAILED;
-        socket_close(&client);
+        socket_close(&client, 1);
         return NULL;
     }
     client->ssl = SSL_new(client->ctx);
     if(client->ssl == NULL)
     {
         _error_code = SSL_CREATION_FAILED;
-        socket_close(&client);
+        socket_close(&client, 1);
         return NULL;
     }
 
@@ -156,7 +156,7 @@ SocketHandler* socket_ssl_client_init(const char* server_ip, uint16_t server_por
     if (SSL_connect(client->ssl) == -1)
     {
         _error_code = SSL_CONNECTION_REFUSED;
-        socket_close(&client);
+        socket_close(&client, 1);
         return NULL;
     }
 
@@ -223,20 +223,20 @@ SocketHandler* socket_ssl_server_init(const char* server_ip, uint16_t server_por
     if(server->ctx == NULL)
     {
         _error_code = SSL_CTX_CREATION_FAILED;
-        socket_close(&server);
+        socket_close(&server, 1);
         return NULL;
     }
 
     if(SSL_CTX_use_certificate_file(server->ctx, public_key_fp, SSL_FILETYPE_PEM) <= 0)
     {
         _error_code = WRONG_PUBLIC_KEY_FP;
-        socket_close(&server);
+        socket_close(&server, 1);
         return NULL;
     }
     if(SSL_CTX_use_PrivateKey_file(server->ctx, private_key_fp, SSL_FILETYPE_PEM) <= 0)
     {
         _error_code = WRONG_PRIVATE_KEY_FP;
-        socket_close(&server);
+        socket_close(&server, 1);
         return NULL;
     }
 
@@ -321,7 +321,7 @@ SocketHandler* socket_accept(SocketHandler* server, ClientData* pclient_data)
     if(client->fd <= 0)
     {
         _error_code = ACCEPT_FAILED;
-        socket_close(&client);
+        socket_close(&client, 1);
         return NULL;
     }
 
@@ -338,7 +338,7 @@ SocketHandler* socket_accept(SocketHandler* server, ClientData* pclient_data)
         if(SSL_accept(client->ssl) <= 0)
         {
             _error_code = SSL_ACCEPT_FAILED;
-            socket_close(&client);
+            socket_close(&client, 1);
             return NULL;
         }
     }
@@ -377,15 +377,17 @@ int socket_recv(SocketHandler* s, char* buffer, int n, int flags)
     }
 }
 
-void socket_close(SocketHandler** pps)
+void socket_close(SocketHandler** pps, char force_close)
 {
     if(*pps == NULL)
     {
         return;
     }
-    char buffer[2];
-    socket_recv(*pps, buffer, 1, 0);  // Yes, this is ugly, but it's the only way I found to wait for the end of precedent operations
-
+    if(!force_close)
+    {
+        char buffer[2];
+        socket_recv(*pps, buffer, 1, 0);  // Yes, this is ugly, but it's the only way I found to wait for the end of precedent operations
+    }
     if((*pps)->ssl != NULL)
     {
         SSL_shutdown((*pps)->ssl);

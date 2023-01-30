@@ -79,7 +79,7 @@ char send_to_v_checker(ServerQueue_el* v_checker_addr, Links_data* pdata)
 
     socket_send(client, (char*)pdata, sizeof(Links_data), 0);  // send the data to the server
 
-    socket_close(&client);
+    socket_close(&client, 0);
 
     return 1;
 }
@@ -163,7 +163,7 @@ void* unknown_links_gestion(void* arg)
                 socket_send(client, &returned, sizeof(char), 0);
             }
 
-            socket_close(&client);
+            socket_close(&client, 0);
         }
         else
         {
@@ -209,7 +209,7 @@ void* conn_infos_gestion(void* arg)
                 }
             }
 
-            socket_close(&client);
+            socket_close(&client, 0);
         }
         else
         {

@@ -30,7 +30,7 @@ SocketHandler* socket_server_init(const char* server_ip, uint16_t server_port, i
 SocketHandler* socket_accept(SocketHandler* server, ClientData* pclient_data);
 int socket_send(SocketHandler* s, const char* buffer, int n, int flags);
 int socket_recv(SocketHandler* s, char* buffer, int n, int flags);
-void socket_close(SocketHandler** pps);
+void socket_close(SocketHandler** pps, char force_close);
 int socket_get_last_error(void);
 void socket_print_last_error(void);
 uint64_t socket_ntoh64(uint64_t input);

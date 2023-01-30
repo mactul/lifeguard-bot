@@ -36,6 +36,7 @@ def decode_audit_data(audit):
 
 async def handle_audit_response(reader, writer):
     data = await reader.read(4*8) # sizeof(uin64_t)+sizeof(uin64_t)+sizeof(uin64_t)+sizeof(double)
+    writer.close()
     channel_id, message_id, password, p = decode_audit_data(data)
 
     print(message_id, password, p)

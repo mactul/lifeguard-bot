@@ -23,5 +23,5 @@ RequestsHandler* req_delete(RequestsHandler* handler, char* url, char* additiona
 RequestsHandler* req_patch(RequestsHandler* handler, char* url, char* data, char* additional_headers);
 RequestsHandler* req_put(RequestsHandler* handler, char* url, char* data, char* additional_headers);
 int req_read_output(RequestsHandler* handler, char* buffer, int buffer_size);
-int req_read_output_body(RequestsHandler* handler, char* buffer, int buffer_size);
+int req_read_output_body(RequestsHandler* handler, char* buffer, int buffer_size, uint64_t* total_bytes);
 void req_close_connection(RequestsHandler** ppr);
