@@ -209,7 +209,7 @@ void* conn_infos_gestion(void* arg)
                 }
             }
 
-            socket_close(&client, 0);
+            socket_close(&client, 1);
         }
         else
         {

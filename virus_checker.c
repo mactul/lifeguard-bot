@@ -83,7 +83,7 @@ void listen_links(void)
             data.message_id = socket_ntoh64(data.message_id);
             data.password = socket_ntoh64(data.password);
 
-            socket_close(&client, 0);
+            socket_close(&client, 1);
 
             if(data.password == CENTRAL_PASSWORD)
             {
