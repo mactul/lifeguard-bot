@@ -23,7 +23,7 @@
 #include "utils.h"
 
 #define MAX_CHAR_ON_HOST 253  /* this is exact, don't change */
-#define HEADERS_LENGTH   220  /* this is exact, don't change */
+#define HEADERS_LENGTH   256  /* this is exact, don't change */
 
 #define CONTENT_LENGTH_STR "content-length"
 
@@ -162,6 +162,10 @@ RequestsHandler* req_request(char* method, char* url, char* data, char* addition
     if(stristr(additional_headers, "connection") == -1)  // we don't want to have the same header two times
     {
         strcat(headers, "Connection: close\r\n");
+    }
+    if(stristr(additional_headers, "accept-encoding") == -1)  // we don't want to have the same header two times
+    {
+        strcat(headers, "Accept-Encoding: identity\r\n");
     }
     
     strcat(headers, additional_headers);
