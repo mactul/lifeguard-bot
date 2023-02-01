@@ -34,7 +34,7 @@ void send_ready(char* ip, uint64_t port)
     
     socket_send(client, (char*)&info_data, sizeof(info_data), 0);  // send the data to the server
 
-    socket_close(&client, 0);
+    socket_close(&client);
 }
 
 void send_audit_to_bot(Audit* paudit)
@@ -51,7 +51,7 @@ void send_audit_to_bot(Audit* paudit)
     
     socket_send(client, (char*)paudit, sizeof(Audit), 0);  // send the data to the server
 
-    socket_close(&client, 0);
+    socket_close(&client);
 }
 
 void listen_links(void)
@@ -83,7 +83,7 @@ void listen_links(void)
             data.message_id = socket_ntoh64(data.message_id);
             data.password = socket_ntoh64(data.password);
 
-            socket_close(&client, 1);
+            socket_close(&client);
 
             if(data.password == CENTRAL_PASSWORD)
             {

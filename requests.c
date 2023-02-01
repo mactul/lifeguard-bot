@@ -335,7 +335,7 @@ void req_close_connection(RequestsHandler** ppr)
     {
         return;
     }
-    socket_close(&((*ppr)->handler), 1);
+    socket_close(&((*ppr)->handler));
     free(*ppr);
     *ppr = NULL;
 }
