@@ -68,7 +68,51 @@ async def audit_server():
             traceback.print_exc(file=file)
             file.close()
             await asyncio.sleep(5)  # We have to wait a little bit before trying to reconnect
+
+
+def is_char_of_url(c):
+    return ('A' <= c and c <= 'Z') or ('a' <= c and c <= 'z') or ('0' <= c and c <= '9') or c in ";,/?:@&=+$-_.!~*'()#"
+
+def extract_urls(content):
+    urls = []
+    i = 0
+    while i < len(content):
+        if content[i:i+7] == "http://" or content[i:i+8] == "https://":
+            a = i
+            while i < len(content) and content[i] != '/':
+                i += 1
+            i += 2
+            while i < len(content) and is_char_of_url(content[i]):
+                i += 1
+            urls.append(content[a: i])
+        i += 1
+
+    return urls
+
+
+async def send_link(channel_id, message_id, url):
+    try:
+        ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = ssl.CERT_NONE
+        reader, writer = await asyncio.open_connection(CENTRAL_IP, UNKNOWN_LINKS_PORT, ssl=ssl_ctx)
         
+        writer.write(build_links_data(1, CENTRAL_PASSWORD, channel_id, message_id, url))
+        await writer.drain()
+
+        data = await reader.read(1)
+
+        if len(data) == 1 and data[0] == TRANSFERT_OK:
+            print("data sended succesfuly")
+        else:
+            print("connexion interrupted before the end of the transfert")
+        
+        writer.close()
+        await writer.wait_closed()
+    except Exception as e:
+        file = open("python_server_logs.txt", "a")
+        traceback.print_exc(file=file)
+        file.close()
 
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
@@ -80,29 +124,10 @@ async def on_message(message:discord.Message):
         
     for attachment in message.attachments:
         print(attachment)
-        try:
-            ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            ssl_ctx.check_hostname = False
-            ssl_ctx.verify_mode = ssl.CERT_NONE
-            reader, writer = await asyncio.open_connection(CENTRAL_IP, UNKNOWN_LINKS_PORT, ssl=ssl_ctx)
-            
-            writer.write(build_links_data(1, CENTRAL_PASSWORD, message.channel.id, message.id, attachment.url))
-            await writer.drain()
-
-            data = await reader.read(1)
-
-            if len(data) == 1 and data[0] == TRANSFERT_OK:
-                print("data sended succesfuly")
-            else:
-                print("connexion interrupted before the end of the transfert")
-            
-            writer.close()
-            await writer.wait_closed()
-        except Exception as e:
-            file = open("python_server_logs.txt", "a")
-            traceback.print_exc(file=file)
-            file.close()
+        await send_link(message.channel.id, message.id, attachment.url)
     
+    for url in extract_urls(message.content):
+        await send_link(message.channel.id, message.id, url)
 
 
 @client.event

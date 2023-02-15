@@ -78,7 +78,6 @@ enum status_codes cmp_create_hash_from_url(Cmp_hash* phash, char* url)
     uint32_t last_viewed[256] = {0};
     uint32_t max_gap[256] = {0};
     uint32_t index = 0;
-    uint64_t total_bytes = 1;
 
     memset(phash, 0, sizeof(Cmp_hash));
 
@@ -90,10 +89,10 @@ enum status_codes cmp_create_hash_from_url(Cmp_hash* phash, char* url)
         return UNKNOW_ERROR;
     }
 
-    while(phash->size < MAX_U32 && phash->size < total_bytes)
+    while(phash->size < MAX_U32 && n != 0)
     {
         errno = 0;
-        n = req_read_output_body(handler, (char*)buffer, BUFFER_SIZE, &total_bytes);
+        n = req_read_output_body(handler, (char*)buffer, BUFFER_SIZE);
         
         if(n > 0)
         {

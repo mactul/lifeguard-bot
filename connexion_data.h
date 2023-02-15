@@ -12,8 +12,11 @@
 #define TRANSFERT_OK 1
 #define TRANSFERT_ERROR 2
 
+#define MAX_DEPTH 2
+
 enum what {
-    READY
+    VCHECKER_READY,
+    SCR_UNIT_READY
 };
 
 typedef struct __attribute__((__packed__)) links_data {

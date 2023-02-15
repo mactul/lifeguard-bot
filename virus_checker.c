@@ -4,6 +4,7 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include "easy_tcp_tls.h"
 #include "database.h"
 #include "connexion_data.h"
@@ -13,7 +14,7 @@
 #define MACHINE_IP "127.0.0.1"
 #define MACHINE_PORT 15792
 
-void send_ready(char* ip, uint64_t port)
+char send_ready(char* ip, uint64_t port)
 {
     SocketHandler* client;
     Conn_infos info_data;
@@ -25,9 +26,9 @@ void send_ready(char* ip, uint64_t port)
     if(client == NULL)
     {
         socket_print_last_error();
-        return;
+        return 0;
     }
-    info_data.what = READY;
+    info_data.what = VCHECKER_READY;
     info_data.password = socket_ntoh64(CENTRAL_PASSWORD);
     info_data.port = socket_ntoh64(port);
     strcpy(info_data.ip, ip);
@@ -35,6 +36,8 @@ void send_ready(char* ip, uint64_t port)
     socket_send(client, (char*)&info_data, sizeof(info_data), 0);  // send the data to the server
 
     socket_close(&client);
+
+    return 1;
 }
 
 void send_audit_to_bot(Audit* paudit)
@@ -66,7 +69,12 @@ void listen_links(void)
         return;
     }
 
-    send_ready(MACHINE_IP, MACHINE_PORT);
+    unsigned int seconds_to_wait = 1;
+    while(!send_ready(MACHINE_IP, MACHINE_PORT))
+    {
+        sleep(seconds_to_wait);
+        seconds_to_wait += 2;
+    }
 
     while (1)
     {
@@ -114,7 +122,12 @@ void listen_links(void)
             }
 
 
-            send_ready(MACHINE_IP, MACHINE_PORT);
+            unsigned int seconds_to_wait = 1;
+            while(!send_ready(MACHINE_IP, MACHINE_PORT))
+            {
+                sleep(seconds_to_wait);
+                seconds_to_wait++;
+            }
         }
         else
         {

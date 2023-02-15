@@ -37,8 +37,7 @@ char queue_next_server(ServerQueue* pqueue, ServerQueue_el* pel, pthread_mutex_t
         pthread_mutex_unlock(pmutex);
         return 0;
     }
-    strcpy(pel->ip, pqueue->last->ip);
-    pel->port = pqueue->last->port;
+    *pel = *(pqueue->last);
 
     ptemp = pqueue->last->newer;
     free(pqueue->last);
@@ -52,12 +51,13 @@ char queue_next_server(ServerQueue* pqueue, ServerQueue_el* pel, pthread_mutex_t
     return 1;
 }
 
-void queue_add_links(LinksQueue* pqueue, Links_data* data, pthread_mutex_t* pmutex)
+void queue_add_links(LinksQueue* pqueue, Links_data* data, char destination, pthread_mutex_t* pmutex)
 {
     LinksQueue_el* pel;
 
     pel = (LinksQueue_el*) malloc(sizeof(LinksQueue_el));
     pel->data = *data;
+    pel->destination = destination;
     pel->newer = NULL;
 
     pthread_mutex_lock(pmutex);
@@ -84,7 +84,7 @@ char queue_next_links(LinksQueue* pqueue, LinksQueue_el* pel, pthread_mutex_t* p
         pthread_mutex_unlock(pmutex);
         return 0;
     }
-    pel->data = pqueue->last->data;
+    *pel = *(pqueue->last);
 
     ptemp = pqueue->last->newer;
     free(pqueue->last);
