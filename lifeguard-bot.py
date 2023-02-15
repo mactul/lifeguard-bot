@@ -63,10 +63,7 @@ async def audit_server():
 
             async with server:
                 await server.serve_forever()
-        except Exception as e:
-            file = open("python_server_logs.txt", "a")
-            traceback.print_exc(file=file)
-            file.close()
+        except:
             await asyncio.sleep(5)  # We have to wait a little bit before trying to reconnect
 
 
