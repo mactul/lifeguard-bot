@@ -35,7 +35,7 @@ lifeguard-bot.py
 - sends links to central on port UNKNOW_LINKS_PORT
 - receives security audits on port AUDIT_PORT
 
-scrapping-unit.py
+scrapping-unit.c
 - binds on port 0 and sends "ready" with port binded to port INFOS_PORT
 - receives links from sites on port binded
 - returns links found on port UNKNOW_LINKS_PORT
