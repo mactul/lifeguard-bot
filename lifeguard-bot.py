@@ -26,32 +26,36 @@ def build_links_data(priority, password, channel_id, message_id, url):
     return bytes([priority])+to_big_endian(bytes(ctypes.c_uint64(password)))+to_big_endian(bytes(ctypes.c_uint64(channel_id)))+to_big_endian(bytes(ctypes.c_uint64(message_id)))+bytes(url, 'ascii')+bytes([0])
 
 def decode_audit_data(audit):
-    channel_id, message_id, password, p = unpack('QQQd', audit)
+    print(audit)
+    print(len(audit))
+    channel_id, message_id, password, p, name = unpack('QQQd256s', audit)
     channel_id = bytes(ctypes.c_uint64(channel_id))
     message_id = bytes(ctypes.c_uint64(message_id))
     password = bytes(ctypes.c_uint64(password))
+    name = name.decode().split('\0')[0]
     
-    return int.from_bytes(channel_id, "big"), int.from_bytes(message_id, "big"), int.from_bytes(password, "big"), p
+    return int.from_bytes(channel_id, "big"), int.from_bytes(message_id, "big"), int.from_bytes(password, "big"), p, name
 
 
 async def handle_audit_response(reader, writer):
-    data = await reader.read(4*8) # sizeof(uin64_t)+sizeof(uin64_t)+sizeof(uin64_t)+sizeof(double)
+    data = await reader.read(4*8+256) # sizeof(uin64_t)+sizeof(uin64_t)+sizeof(uin64_t)+sizeof(double)+sizeof(char[256])
     writer.close()
-    channel_id, message_id, password, p = decode_audit_data(data)
+    channel_id, message_id, password, p, name = decode_audit_data(data)
 
-    print(message_id, password, p)
-    channel = client.get_channel(channel_id)
-    message = await channel.fetch_message(message_id)
+    if password == CENTRAL_PASSWORD:
+        print(message_id, password, p, name)
+        channel = client.get_channel(channel_id)
+        message = await channel.fetch_message(message_id)
 
-    if p == 0.0:
-        embed = discord.Embed(title="Antivirus Scanning Audit", description="We have not found any known virus that matches this file", color=GREEN)
-    else:
-        if p <= 0.75:
-            color = ORANGE
+        if p == 0.0:
+            embed = discord.Embed(title="Antivirus Scanning Audit", description="We have not found any known virus that matches this file:\n\t"+name, color=GREEN)
         else:
-            color = RED
-        embed = discord.Embed(title="Antivirus Scanning Audit", description="We suspect that this file is a malware variant.\nConfidence: "+str(round(100*p, 2))+"%", color=color)
-    await message.reply(embed=embed)
+            if p <= 0.75:
+                color = ORANGE
+            else:
+                color = RED
+            embed = discord.Embed(title="Antivirus Scanning Audit", description="We suspect that this file ("+name+") is a malware variant.\nConfidence: "+str(round(100*p, 2))+"%", color=color)
+        await message.reply(embed=embed)
 
 async def audit_server():
     while True:

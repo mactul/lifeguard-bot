@@ -77,7 +77,7 @@ void* links_attribution(void* arg)
         }
         if(!send_to_analysis(&server_el, &(links_el.data)))
         {
-            // echec
+            // failure
             queue_add_links(&links_queue, &(links_el.data), links_el.destination, &links_mutex);
             sem_post(&links_sem);
         }

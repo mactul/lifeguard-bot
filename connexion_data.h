@@ -8,6 +8,7 @@
 
 #define MAX_URL_SIZE 1024
 #define MAX_EXTENSION_SIZE 32
+#define MAX_NAME_SIZE 256
 
 #define TRANSFERT_OK 1
 #define TRANSFERT_ERROR 2
@@ -40,4 +41,5 @@ typedef struct __attribute__((__packed__)) audit {
     uint64_t message_id;
     uint64_t password;
     double p;
+    char name[MAX_NAME_SIZE];
 } Audit;

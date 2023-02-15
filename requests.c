@@ -390,6 +390,7 @@ int req_read_output_body(RequestsHandler* handler, char* buffer, int buffer_size
         offset = -1;
         handler->chunked = 0;
         handler->total_bytes = 0;
+        handler->bytes_readed = 0;
         while(offset == -1 && (size = req_read_output(handler, buffer, buffer_size)) > 0)
         {
             int i = 0;
@@ -415,13 +416,20 @@ int req_read_output_body(RequestsHandler* handler, char* buffer, int buffer_size
                 offset = i+1;
             }
         }
+
+        handler->headers_readed = 1;
         
         if(handler->total_bytes == 0)
         {
             new_chunk = 1;
             handler->chunked = 1;
         }
-        handler->headers_readed = 1;
+        else
+        {
+            bytescpy(buffer, &(buffer[offset]), size-offset);
+            handler->bytes_readed = size - offset + req_read_output(handler, &(buffer[size-offset]), buffer_size-size+offset);
+            return handler->bytes_readed;
+        }
     }
 
     if(size <= 0)

@@ -14,6 +14,23 @@
 #define MACHINE_IP "127.0.0.1"
 #define MACHINE_PORT 15792
 
+void get_name_from_url(char* name, const char* url)
+{
+    int i = strlen(url);
+    while(url[i] != '/')
+    {
+        i--;
+    }
+    i++;
+    while(url[i] != '\0')
+    {
+        *name = url[i];
+        name++;
+        i++;
+    }
+    name[i] = '\0';
+}
+
 char send_ready(char* ip, uint64_t port)
 {
     SocketHandler* client;
@@ -106,6 +123,8 @@ void listen_links(void)
                 audit.message_id = socket_ntoh64(data.message_id);
                 audit.password = socket_ntoh64(CENTRAL_PASSWORD);
                 audit.p = best_malware_correspondance(&hash);
+                memset(audit.name, 0, sizeof(audit.name));
+                get_name_from_url(audit.name, data.url);
 
                 if(audit.p <= 0.5)
                 {
