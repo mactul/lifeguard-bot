@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <time.h>
 #include "easy_tcp_tls.h"
 #include "database.h"
 #include "connexion_data.h"
@@ -12,7 +13,11 @@
 
 // This will be replaced by argv or by an automatic algorithm
 #define MACHINE_IP "127.0.0.1"
-#define MACHINE_PORT 15792
+static int machine_port;
+
+static uint64_t number_of_files_downloaded = 0;
+static double avg_time_seconds = 0;
+
 
 void get_name_from_url(char* name, const char* url)
 {
@@ -48,6 +53,7 @@ char send_ready(char* ip, uint64_t port)
     info_data.what = VCHECKER_READY;
     info_data.password = socket_ntoh64(CENTRAL_PASSWORD);
     info_data.port = socket_ntoh64(port);
+    info_data.avg_time = avg_time_seconds;
     strcpy(info_data.ip, ip);
     
     socket_send(client, (char*)&info_data, sizeof(info_data), 0);  // send the data to the server
@@ -78,7 +84,7 @@ void listen_links(void)
 {
     SocketHandler* server;
 
-    server = socket_ssl_server_init(MACHINE_IP, MACHINE_PORT, 1, "cert.pem", "key.pem");
+    server = socket_ssl_server_init(MACHINE_IP, machine_port, 1, "cert.pem", "key.pem");
 
     if(server == NULL)
     {
@@ -87,7 +93,7 @@ void listen_links(void)
     }
 
     unsigned int seconds_to_wait = 1;
-    while(!send_ready(MACHINE_IP, MACHINE_PORT))
+    while(!send_ready(MACHINE_IP, machine_port))
     {
         sleep(seconds_to_wait);
         seconds_to_wait += 2;
@@ -115,6 +121,8 @@ void listen_links(void)
                 Audit audit;
                 printf("%llu %s\n", data.message_id, data.url);
 
+                time_t start = time(NULL);
+
                 cmp_create_hash_from_url(&hash, data.url);
 
                 printf("%d\n", hash.size);
@@ -138,11 +146,16 @@ void listen_links(void)
                 printf("p: %f\n", audit.p);
 
                 send_audit_to_bot(&audit);
+
+                avg_time_seconds = (avg_time_seconds*number_of_files_downloaded + difftime(time(NULL), start))/(number_of_files_downloaded+1);
+                number_of_files_downloaded++;
+
+                printf("time avg: %.2f\n", avg_time_seconds);
             }
 
 
             unsigned int seconds_to_wait = 1;
-            while(!send_ready(MACHINE_IP, MACHINE_PORT))
+            while(!send_ready(MACHINE_IP, machine_port))
             {
                 sleep(seconds_to_wait);
                 seconds_to_wait++;
@@ -155,8 +168,17 @@ void listen_links(void)
     }
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+    if(argc == 2)
+    {
+        machine_port = atoi(argv[1]);
+    }
+    else
+    {
+        machine_port = 15792;
+    }
+
     socket_start();
 
     listen_links();

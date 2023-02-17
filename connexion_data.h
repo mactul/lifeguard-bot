@@ -33,6 +33,7 @@ typedef struct __attribute__((__packed__)) conn_infos {
     char what;
     uint64_t password;
     uint64_t port;
+    double avg_time;
     char ip[22];
 } Conn_infos;
 

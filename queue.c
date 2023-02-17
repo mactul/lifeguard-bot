@@ -4,48 +4,65 @@
 #include <string.h>
 #include "queue.h"
 
-void queue_add_server(ServerQueue* pqueue, char* ip, uint64_t port, pthread_mutex_t* pmutex)
+void queue_add_server(ServerQueue_el** pproot, char* ip, uint64_t port, double avg_time, pthread_mutex_t* pmutex)
 {
     ServerQueue_el* pel;
 
     pel = (ServerQueue_el*) malloc(sizeof(ServerQueue_el));
     strcpy(pel->ip, ip);
     pel->port = port;
-    pel->newer = NULL;
+    pel->avg_time = avg_time;
+    pel->next = NULL;
 
     pthread_mutex_lock(pmutex);
-    if(pqueue->first == NULL)
+
+    if(*pproot == NULL)
     {
-        pqueue->first = pel;
-        pqueue->last = pel;
+        *pproot = pel;
+        goto UNLOCK;
     }
-    else
+
+    if(avg_time < (*pproot)->avg_time)
     {
-        pqueue->first->newer = pel;
-        pqueue->first = pel;
+        pel->next = *pproot;
+        *pproot = pel;
+        goto UNLOCK;
     }
+
+    ServerQueue_el* root = *pproot;
+    while(root->next != NULL && avg_time >= root->next->avg_time)
+    {
+        root = root->next;
+    }
+    // root->next > pel
+    ServerQueue_el* last_root_next = root->next;
+    root->next = pel;
+    pel->next = last_root_next;
+
+UNLOCK:
     pthread_mutex_unlock(pmutex);
 }
 
-char queue_next_server(ServerQueue* pqueue, ServerQueue_el* pel, pthread_mutex_t* pmutex)
+char queue_next_server(ServerQueue_el** pproot, ServerQueue_el* pel, pthread_mutex_t* pmutex)
 {
     ServerQueue_el* ptemp;
 
     pthread_mutex_lock(pmutex);
-    if(pqueue->last == NULL)
+
+    if(*pproot == NULL)
     {
         pthread_mutex_unlock(pmutex);
         return 0;
     }
-    *pel = *(pqueue->last);
 
-    ptemp = pqueue->last->newer;
-    free(pqueue->last);
-    pqueue->last = ptemp;
-    if(ptemp == NULL)
-    {
-        pqueue->first = NULL;
-    }
+    ptemp = *pproot;
+
+    *pproot = (*pproot)->next;
+
+    *pel = *ptemp;
+
+    free(ptemp);
+
     pthread_mutex_unlock(pmutex);
 
     return 1;

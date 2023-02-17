@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <ctype.h>
+#include <time.h>
 #include "utils.h"
 #include "requests.h"
 #include "easy_tcp_tls.h"
@@ -15,6 +16,9 @@
 
 #define HTML_A_TAG_STR "<a "
 #define HREF_STR "href="
+
+static uint64_t number_of_files_downloaded = 0;
+static double avg_time_seconds = 0;
 
 char is_char_of_url(char c)
 {
@@ -263,6 +267,7 @@ void send_ready(char* ip, uint64_t port)
     info_data.what = SCR_UNIT_READY;
     info_data.password = socket_ntoh64(CENTRAL_PASSWORD);
     info_data.port = socket_ntoh64(port);
+    info_data.avg_time = avg_time_seconds;
     strcpy(info_data.ip, ip);
     
     socket_send(client, (char*)&info_data, sizeof(info_data), 0);  // send the data to the server
@@ -299,11 +304,15 @@ void listen_links(void)
 
             printf("%s\n", data.url);
 
+            time_t start = time(NULL);
+
             if(data.password == CENTRAL_PASSWORD)
             {
                 find_urls(&data);
             }
 
+            avg_time_seconds = (avg_time_seconds*number_of_files_downloaded + difftime(time(NULL), start))/(number_of_files_downloaded+1);
+            number_of_files_downloaded++;
 
             send_ready(MACHINE_IP, MACHINE_PORT);
         }

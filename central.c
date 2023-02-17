@@ -28,8 +28,8 @@ sem_t v_server_sem;
 sem_t links_sem;
 sem_t s_server_sem;
 
-ServerQueue v_checkers_servers_queue;
-ServerQueue scrp_unit_servers_queue;
+ServerQueue_el* v_checkers_servers_root = NULL;
+ServerQueue_el* scrp_unit_servers_root = NULL;
 LinksQueue_el* links_queue_root = NULL;
 
 
@@ -68,12 +68,12 @@ void* links_attribution(void* arg)
         if(links_el.destination == DEST_VIRUS_CHECKER)
         {
             sem_wait(&v_server_sem);
-            queue_next_server(&v_checkers_servers_queue, &server_el, &v_server_mutex);
+            queue_next_server(&v_checkers_servers_root, &server_el, &v_server_mutex);
         }
         else
         {
             sem_wait(&s_server_sem);
-            queue_next_server(&scrp_unit_servers_queue, &server_el, &s_server_mutex);
+            queue_next_server(&scrp_unit_servers_root, &server_el, &s_server_mutex);
         }
         if(!send_to_analysis(&server_el, &(links_el.data)))
         {
@@ -178,11 +178,11 @@ void* conn_infos_gestion(void* arg)
                 switch(infos_data.what)
                 {
                     case VCHECKER_READY:
-                        queue_add_server(&v_checkers_servers_queue, infos_data.ip, infos_data.port, &v_server_mutex);
+                        queue_add_server(&v_checkers_servers_root, infos_data.ip, infos_data.port, infos_data.avg_time, &v_server_mutex);
                         sem_post(&v_server_sem);
                         break;
                     case SCR_UNIT_READY:
-                        queue_add_server(&scrp_unit_servers_queue, infos_data.ip, infos_data.port, &s_server_mutex);
+                        queue_add_server(&scrp_unit_servers_root, infos_data.ip, infos_data.port, infos_data.avg_time, &s_server_mutex);
                         sem_post(&s_server_sem);
                         break;
                     default:
@@ -204,12 +204,6 @@ int main()
     pthread_t unknown_links_thread;
     pthread_t conn_infos_thread;
     pthread_t links_attribution_thread;
-
-    v_checkers_servers_queue.first = NULL;
-    v_checkers_servers_queue.last = NULL;
-
-    scrp_unit_servers_queue.first = NULL;
-    scrp_unit_servers_queue.last = NULL;
 
     socket_start();
 
