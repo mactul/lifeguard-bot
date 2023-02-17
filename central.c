@@ -30,7 +30,7 @@ sem_t s_server_sem;
 
 ServerQueue v_checkers_servers_queue;
 ServerQueue scrp_unit_servers_queue;
-LinksQueue links_queue;
+LinksQueue_el* links_queue_root = NULL;
 
 
 char send_to_analysis(ServerQueue_el* server_addr, Links_data* pdata)
@@ -63,7 +63,7 @@ void* links_attribution(void* arg)
 
         sem_wait(&links_sem);
 
-        queue_next_links(&links_queue, &links_el, &links_mutex);
+        queue_next_links(&links_queue_root, &links_el, &links_mutex);
 
         if(links_el.destination == DEST_VIRUS_CHECKER)
         {
@@ -78,7 +78,7 @@ void* links_attribution(void* arg)
         if(!send_to_analysis(&server_el, &(links_el.data)))
         {
             // failure
-            queue_add_links(&links_queue, &(links_el.data), links_el.destination, &links_mutex);
+            queue_add_links(&links_queue_root, &(links_el.data), links_el.destination, &links_mutex);
             sem_post(&links_sem);
         }
     }
@@ -126,14 +126,14 @@ void* unknown_links_gestion(void* arg)
                     // it's a website
                     if(data.priority <= MAX_DEPTH && !trusted_host(host))
                     {
-                        queue_add_links(&links_queue, &data, DEST_SCRAPPING_UNIT, &links_mutex);
+                        queue_add_links(&links_queue_root, &data, DEST_SCRAPPING_UNIT, &links_mutex);
                         sem_post(&links_sem);
                     }
                 }
                 else if(!is_image_extension(extension))
                 {
                     // it's a file and not an image
-                    queue_add_links(&links_queue, &data, DEST_VIRUS_CHECKER, &links_mutex);
+                    queue_add_links(&links_queue_root, &data, DEST_VIRUS_CHECKER, &links_mutex);
                     sem_post(&links_sem);
                 }
 
@@ -210,9 +210,6 @@ int main()
 
     scrp_unit_servers_queue.first = NULL;
     scrp_unit_servers_queue.last = NULL;
-
-    links_queue.first = NULL;
-    links_queue.last = NULL;
 
     socket_start();
 

@@ -51,48 +51,64 @@ char queue_next_server(ServerQueue* pqueue, ServerQueue_el* pel, pthread_mutex_t
     return 1;
 }
 
-void queue_add_links(LinksQueue* pqueue, Links_data* data, char destination, pthread_mutex_t* pmutex)
+void queue_add_links(LinksQueue_el** pproot, Links_data* data, char destination, pthread_mutex_t* pmutex)
 {
     LinksQueue_el* pel;
 
     pel = (LinksQueue_el*) malloc(sizeof(LinksQueue_el));
     pel->data = *data;
     pel->destination = destination;
-    pel->newer = NULL;
+    pel->next = NULL;
 
     pthread_mutex_lock(pmutex);
-    if(pqueue->first == NULL)
+
+    if(*pproot == NULL)
     {
-        pqueue->first = pel;
-        pqueue->last = pel;
+        *pproot = pel;
+        goto UNLOCK;
     }
-    else
+
+    if(data->priority < (*pproot)->data.priority)
     {
-        pqueue->first->newer = pel;
-        pqueue->first = pel;
+        pel->next = *pproot;
+        *pproot = pel;
+        goto UNLOCK;
     }
+
+    LinksQueue_el* root = *pproot;
+    while(root->next != NULL && data->priority >= root->next->data.priority)
+    {
+        root = root->next;
+    }
+    // root->next > pel
+    LinksQueue_el* last_root_next = root->next;
+    root->next = pel;
+    pel->next = last_root_next;
+
+UNLOCK:
     pthread_mutex_unlock(pmutex);
 }
 
-char queue_next_links(LinksQueue* pqueue, LinksQueue_el* pel, pthread_mutex_t* pmutex)
+char queue_next_links(LinksQueue_el** pproot, LinksQueue_el* pel, pthread_mutex_t* pmutex)
 {
     LinksQueue_el* ptemp;
 
     pthread_mutex_lock(pmutex);
-    if(pqueue->last == NULL)
+
+    if(*pproot == NULL)
     {
         pthread_mutex_unlock(pmutex);
         return 0;
     }
-    *pel = *(pqueue->last);
 
-    ptemp = pqueue->last->newer;
-    free(pqueue->last);
-    pqueue->last = ptemp;
-    if(ptemp == NULL)
-    {
-        pqueue->first = NULL;
-    }
+    ptemp = *pproot;
+
+    *pproot = (*pproot)->next;
+
+    *pel = *ptemp;
+
+    free(ptemp);
+
     pthread_mutex_unlock(pmutex);
 
     return 1;

@@ -13,7 +13,7 @@ Lifeguard-bot is a security discord bot, scanning links and files for potential 
 - ~~change the database system by a most flexible one~~ DONE
 - ~~add scrapping_unit.c program~~ DONE
 - ~~modify the returned embed to quote the filename~~ DONE
-- change queue.c to handle priority numbers
+- ~~change queue.c to handle priority numbers~~ DONE
 - redirect to the fastest server each time
 - improve the gestion of http redirections
 - add a virustotal verification to reduce false positive
