@@ -1,5 +1,4 @@
 import ctypes
-from pickle import REDUCE
 import discord
 import asyncio
 from struct import unpack
@@ -36,6 +35,16 @@ def decode_audit_data(audit):
     
     return int.from_bytes(channel_id, "big"), int.from_bytes(message_id, "big"), int.from_bytes(password, "big"), p, name
 
+def get_recommandation(p):
+    recommandation = ""
+    if p < 0.5:
+        recommandation = "Do not panic, the file is probably not a virus. However, be careful if you download it, if possible run it in a virtual machine first."
+    elif p < 0.75:
+        recommandation = "We are not sure how dangerous this file is, but it looks like a virus. We highly recommend you not to download it."
+    else:
+        recommandation = "We could be wrong, but we are pretty sure that this file is a virus, do not download it."
+    
+    return recommandation + "\nNever trust your friends when they send you suspicious files, their discord account may have been hacked."
 
 async def handle_audit_response(reader, writer):
     data = await reader.read(4*8+256) # sizeof(uin64_t)+sizeof(uin64_t)+sizeof(uin64_t)+sizeof(double)+sizeof(char[256])
@@ -48,13 +57,13 @@ async def handle_audit_response(reader, writer):
         message = await channel.fetch_message(message_id)
 
         if p == 0.0:
-            embed = discord.Embed(title="Antivirus Scanning Audit", description="We have not found any known virus that matches this file:\n\t"+name, color=GREEN)
+            embed = discord.Embed(title="Antivirus Scanning Audit", description="The file `"+name+"` found here does not look like a known virus for us.\nStay safe but it seems okay.", color=GREEN)
         else:
             if p <= 0.75:
                 color = ORANGE
             else:
                 color = RED
-            embed = discord.Embed(title="Antivirus Scanning Audit", description="We suspect that this file ("+name+") is a malware variant.\nConfidence: "+str(round(100*p, 2))+"%", color=color)
+            embed = discord.Embed(title="Antivirus Scanning Audit", description="The probability that the file `"+name+"` we found here is a malware variant is about **"+str(round(100*p, 2))+"%**.\n\n"+get_recommandation(p), color=color)
         await message.reply(embed=embed)
 
 async def audit_server():
