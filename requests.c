@@ -359,13 +359,12 @@ int req_read_output_body(RequestsHandler* handler, char* buffer, int buffer_size
 
     assert(handler != 0);
 
-    if(handler->total_bytes == 0)
-    {
-        return 0;
-    }
-
     if(handler->headers_readed)
     {
+        if(handler->total_bytes == 0)
+        {
+            return 0;
+        }
         if(handler->total_bytes > handler->bytes_readed)
         {
             int n = min(buffer_size, handler->total_bytes - handler->bytes_readed);
