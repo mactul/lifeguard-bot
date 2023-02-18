@@ -28,6 +28,10 @@
 
 #define CONTENT_LENGTH_STR "content-length"
 
+#ifndef min
+#define min(a, b) (((a) < (b)) ? (a): (b))
+#endif
+
 struct requests_handler {
     SocketHandler* handler;
     int64_t total_bytes;
