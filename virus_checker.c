@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <time.h>
 #include "easy_tcp_tls.h"
+#include "cmp_hash.h"
 #include "database.h"
 #include "connexion_data.h"
 #include "central_credentials.h"

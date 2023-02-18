@@ -5,6 +5,7 @@
 #include <semaphore.h>
 #include <stdint.h>
 #include <string.h>
+#include "cmp_hash.h"
 #include "easy_tcp_tls.h"
 #include "central_credentials.h"
 #include "database.h"

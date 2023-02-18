@@ -1,5 +1,3 @@
-#include <stdint.h>
-
 #define BUFFER_SIZE 2048
 #define CORRECTION_VALUE 13.513407334  // log(0.5)/log(0.9)
                                        // because 0.5 = exp(x*log(0.9)) <=> x = log(0.5)/log(0.9)

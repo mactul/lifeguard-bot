@@ -1,10 +1,14 @@
-#include "database.h"
 #include <dirent.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <mysql/mysql.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include "cmp_hash.h"
+#include "database.h"
 #include "db_credentials.h"
 
 
@@ -125,10 +129,8 @@ void convert_old_db(void)
 }
 
 
-void add_db_from_folder(char* folder_path)
+void add_hash_to_db(Cmp_hash* phash)
 {
-    DIR *d;
-    struct dirent *dir;
     MYSQL *con = mysql_init(NULL);
 
     if (mysql_real_connect(con, DB_HOST, DB_LOGIN, DB_PASSWORD,
@@ -137,44 +139,23 @@ void add_db_from_folder(char* folder_path)
         finish_with_error(con);
         return;
     }
-    
-    d = opendir(folder_path);
-    if (d)
+
+    if(phash->size != 0)
     {
-        int counter = 0;
-        while ((dir = readdir(d)) != NULL)
+        if(check_hash_integrity(phash))
         {
-            char path[1024];
+            char chunk[2*sizeof(Cmp_hash)+1];
+            mysql_real_escape_string(con, chunk, (char*)phash, sizeof(Cmp_hash));
+            char *st = "INSERT INTO virus(size, hash) VALUES('%d', '%s')";
+            size_t st_len = strlen(st);
 
-            strcpy(path, folder_path);
-            strcat(path, dir->d_name);
-            if(is_regular_file(path))
+            char query[st_len + 2*sizeof(Cmp_hash)+1];
+            int len = snprintf(query, st_len + 2*sizeof(Cmp_hash)+1, st, phash->size, chunk);
+
+            if (mysql_real_query(con, query, len))
             {
-                Cmp_hash hash;
-                if(cmp_create_hash(&hash, path) == OK && hash.size != 0)
-                {
-                    if(check_hash_integrity(&hash))
-                    {
-                        char chunk[2*sizeof(Cmp_hash)+1];
-                        mysql_real_escape_string(con, chunk, (char*)&hash, sizeof(Cmp_hash));
-                        char *st = "INSERT INTO virus(size, hash) VALUES('%d', '%s')";
-                        size_t st_len = strlen(st);
-
-                        char query[st_len + 2*sizeof(Cmp_hash)+1];
-                        int len = snprintf(query, st_len + 2*sizeof(Cmp_hash)+1, st, hash.size, chunk);
-
-                        if (mysql_real_query(con, query, len))
-                        {
-                            fprintf(stderr, "%s\n", mysql_error(con));
-                        }
-                    }
-                    remove(path); // delete the file
-                    counter++;
-                    printf("%d\n", counter);
-                }
+                fprintf(stderr, "%s\n", mysql_error(con));
             }
         }
-        closedir(d);
-        mysql_close(con);
     }
 }

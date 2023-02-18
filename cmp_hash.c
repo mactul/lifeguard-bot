@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <errno.h>
+#include <stdint.h>
 #include "cmp_hash.h"
 #include "requests.h"
 
@@ -85,7 +86,7 @@ enum status_codes cmp_create_hash_from_url(Cmp_hash* phash, char* url)
 
     if(handler == NULL)
     {
-        printf("%d\n", req_get_last_error());
+        printf("get init error: %d\n", req_get_last_error());
         return UNKNOW_ERROR;
     }
 
