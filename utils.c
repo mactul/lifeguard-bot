@@ -164,6 +164,7 @@ char trusted_host(char* host)
         "youtu.be",
         "twitter.com",
         "www.twitter.com",
+        "github.com",
         NULL
     };
 

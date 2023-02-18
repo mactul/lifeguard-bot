@@ -12,7 +12,7 @@
 #define BUFFER_SIZE 2048
 
 #define MACHINE_IP "127.0.0.1"
-#define MACHINE_PORT 15793
+static int machine_port;
 
 #define HTML_A_TAG_STR "<a "
 #define HREF_STR "href="
@@ -279,7 +279,7 @@ void listen_links(void)
 {
     SocketHandler* server;
 
-    server = socket_ssl_server_init(MACHINE_IP, MACHINE_PORT, 1, "cert.pem", "key.pem");
+    server = socket_ssl_server_init(MACHINE_IP, machine_port, 1, "cert.pem", "key.pem");
 
     if(server == NULL)
     {
@@ -287,7 +287,7 @@ void listen_links(void)
         return;
     }
 
-    send_ready(MACHINE_IP, MACHINE_PORT);
+    send_ready(MACHINE_IP, machine_port);
 
     while (1)
     {
@@ -314,7 +314,7 @@ void listen_links(void)
             avg_time_seconds = (avg_time_seconds*number_of_files_downloaded + difftime(time(NULL), start))/(number_of_files_downloaded+1);
             number_of_files_downloaded++;
 
-            send_ready(MACHINE_IP, MACHINE_PORT);
+            send_ready(MACHINE_IP, machine_port);
         }
         else
         {
@@ -324,8 +324,17 @@ void listen_links(void)
 }
 
 
-int main()
+int main(int argc, char* argv[])
 {
+    if(argc == 2)
+    {
+        machine_port = atoi(argv[1]);
+    }
+    else
+    {
+        machine_port = 15793;
+    }
+
     socket_start();
 
     listen_links();
