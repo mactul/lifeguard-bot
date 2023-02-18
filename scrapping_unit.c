@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <ctype.h>
+#include <unistd.h>
 #include <time.h>
 #include "utils.h"
 #include "requests.h"
@@ -250,7 +252,7 @@ void find_urls(Links_data* data)
     req_close_connection(&handler);
 }
 
-void send_ready(char* ip, uint64_t port)
+char send_ready(char* ip, uint64_t port)
 {
     SocketHandler* client;
     Conn_infos info_data;
@@ -262,7 +264,7 @@ void send_ready(char* ip, uint64_t port)
     if(client == NULL)
     {
         socket_print_last_error();
-        return;
+        return 0;
     }
     info_data.what = SCR_UNIT_READY;
     info_data.password = socket_ntoh64(CENTRAL_PASSWORD);
@@ -273,6 +275,8 @@ void send_ready(char* ip, uint64_t port)
     socket_send(client, (char*)&info_data, sizeof(info_data), 0);  // send the data to the server
 
     socket_close(&client);
+
+    return 1;
 }
 
 void listen_links(void)
@@ -287,7 +291,12 @@ void listen_links(void)
         return;
     }
 
-    send_ready(MACHINE_IP, machine_port);
+    unsigned int seconds_to_wait = 1;
+    while(!send_ready(MACHINE_IP, machine_port))
+    {
+        sleep(seconds_to_wait);
+        seconds_to_wait += 2;
+    }
 
     while (1)
     {
@@ -314,7 +323,12 @@ void listen_links(void)
             avg_time_seconds = (avg_time_seconds*number_of_files_downloaded + difftime(time(NULL), start))/(number_of_files_downloaded+1);
             number_of_files_downloaded++;
 
-            send_ready(MACHINE_IP, machine_port);
+            unsigned int seconds_to_wait = 1;
+            while(!send_ready(MACHINE_IP, machine_port))
+            {
+                sleep(seconds_to_wait);
+                seconds_to_wait++;
+            }
         }
         else
         {

@@ -54,6 +54,8 @@ async def handle_audit_response(reader, writer):
     if password == CENTRAL_PASSWORD:
         print(message_id, password, p, name)
         channel = client.get_channel(channel_id)
+        if channel is None:
+            channel = await client.fetch_channel(channel_id)
         message = await channel.fetch_message(message_id)
 
         if p == 0.0:
