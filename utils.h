@@ -20,3 +20,5 @@ char char_in_str(char* str, char c);
 char starts_with_case_unsensitive(char* str, const char* ref);
 void url_slicer(const char* url, char* host, char* extension);
 char trusted_host(char* host);
+char* strtrim(char* str);
+void retrieve_absolute_url(char* url, const char* reference_url);

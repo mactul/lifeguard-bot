@@ -2,6 +2,10 @@
 #include <string.h>
 #include <ctype.h>
 
+#define is_ascii(c) (('0' <= c && c <= '9') || ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z') || char_in_str(";,/?:@&=+$-_.!~*'()#%", c))
+
+#define MAX_URL_SIZE 1024
+
 void int_to_string(int n, char s[])
 {
     int i, sign;
@@ -176,4 +180,82 @@ char trusted_host(char* host)
         i++;
     }
     return 0;
+}
+
+char* strtrim(char* str)
+{
+    while(!is_ascii(*str))
+    {
+        str++;
+    }
+    int i = strlen(str) - 1;
+    while(!is_ascii(str[i]))
+    {
+        str[i] = '\0';
+        i--;
+    }
+
+    return str;
+}
+
+void retrieve_absolute_url(char* url, const char* reference_url)
+{
+    if(!starts_with_case_unsensitive(url, "https://") && !starts_with_case_unsensitive(url, "http://"))
+    {
+        char relative_url[MAX_URL_SIZE];
+        int k = 0;
+        int n_backward = 0;
+        while(url[k] == '/' || url[k+1] == '/' || url[k+2] == '/')
+        {
+            if(url[k] == '.' && url[k+1] == '.' && url[k+2] == '/')
+            {
+                n_backward++;
+                k += 3;
+            }
+            else
+            {
+                k++;
+            }
+        }
+        strcpy(relative_url, &(url[k]));
+
+        int end_of_path = 0;
+        int n_slash = 0;
+        while(reference_url[end_of_path] != '\0' && reference_url[end_of_path] != '?' && reference_url[end_of_path] != '#')
+        {
+            if(reference_url[end_of_path] == '/')
+                n_slash++;
+            end_of_path++;
+        }
+        k = end_of_path;
+        if(n_slash > 2)
+        {
+            char is_file = 0;
+            while(reference_url[k] != '/')
+            {
+                if(reference_url[k] == '.')
+                    is_file = 1;
+                k--;
+            }
+            if(is_file)
+                end_of_path = k;
+        }
+        
+        end_of_path--;
+
+        if(reference_url[end_of_path] == '/')
+            end_of_path--;
+
+        while(n_backward > 0)
+        {
+            if(reference_url[end_of_path] == '/')
+                n_backward--;
+            end_of_path--;
+        }
+        strncpy(url, reference_url, end_of_path+1);
+        url[end_of_path+1] = '/';
+        url[end_of_path+2] = '\0';
+
+        strcat(url, relative_url);
+    }
 }

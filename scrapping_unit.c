@@ -134,60 +134,8 @@ char update_url(char* url, char c, const char* reference_url)
         i = 0;
         j = -1;
         href_passed = 0;
-        if(!starts_with_case_unsensitive(url, "https://") && !starts_with_case_unsensitive(url, "http://"))
-        {
-            char relative_url[MAX_URL_SIZE];
-            int k = 0;
-            int n_backward = 0;
-            while(url[k] == '/' || url[k+1] == '/' || url[k+2] == '/')
-            {
-                if(url[k] == '.' && url[k+1] == '.' && url[k+2] == '/')
-                {
-                    n_backward++;
-                    k += 3;
-                }
-                else
-                {
-                    k++;
-                }
-            }
-            strcpy(relative_url, &(url[k]));
-
-            int end_of_path = 0;
-            while(reference_url[end_of_path] != '\0' && reference_url[end_of_path] != '?' && reference_url[end_of_path] != '#')
-            {
-                end_of_path++;
-            }
-            k = end_of_path;
-            char is_file = 0;
-            while(reference_url[k] != '/')
-            {
-                if(reference_url[k] == '.')
-                    is_file = 1;
-                k--;
-            }
-            if(is_file)
-                end_of_path = k;
-            
-            end_of_path--;
-
-            if(reference_url[end_of_path] == '/')
-                end_of_path--;
-
-            while(n_backward > 0)
-            {
-                if(reference_url[end_of_path] == '/')
-                    n_backward--;
-                end_of_path--;
-            }
-            strncpy(url, reference_url, end_of_path+1);
-            url[end_of_path+1] = '/';
-            url[end_of_path+2] = '\0';
-
-            strcat(url, relative_url);
-
-            printf("%s\n", url);
-        }
+        
+        retrieve_absolute_url(url, reference_url);
         if(char_in_str(url, '.') && strlen(url) >= 11)
         {
             // coherent url
