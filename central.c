@@ -122,7 +122,7 @@ void* unknown_links_gestion(void* arg)
 
                 printf("%s\n", extension);
 
-                if(is_web_extension(extension) && !starts_with(data.url, DISCORD_ATTACHMENTS_START))
+                if(!data.file_certified && !starts_with(data.url, DISCORD_ATTACHMENTS_START))
                 {
                     // it's a website
                     if(data.priority <= MAX_DEPTH && !trusted_host(host))

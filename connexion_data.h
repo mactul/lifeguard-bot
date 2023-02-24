@@ -22,6 +22,7 @@ enum what {
 
 typedef struct __attribute__((__packed__)) links_data {
     char priority;
+    char file_certified;
     uint64_t password;
     uint64_t channel_id;
     uint64_t message_id;

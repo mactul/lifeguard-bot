@@ -70,37 +70,37 @@ int req_read_output(RequestsHandler* handler, char* buffer, int n);
 
 /* This part is all http methods implementation. */
 
-RequestsHandler* req_get(char* url, char* additional_headers)
+RequestsHandler* req_get(const char* url, const char* additional_headers)
 {
     return req_request("GET ", url, "", additional_headers);
 }
 
-RequestsHandler* req_post(char* url, char* data, char* additional_headers)
+RequestsHandler* req_post(const char* url, const char* data, const char* additional_headers)
 {
     return req_request("POST ", url, data, additional_headers);
 }
 
-RequestsHandler* req_delete(RequestsHandler* handler, char* url, char* additional_headers)
+RequestsHandler* req_delete(const char* url, const char* additional_headers)
 {
     return req_request("DELETE ", url, "", additional_headers);
 }
 
-RequestsHandler* req_patch(RequestsHandler* handler, char* url, char* data, char* additional_headers)
+RequestsHandler* req_patch(const char* url, const char* data, const char* additional_headers)
 {
     return req_request("PATCH ", url, data, additional_headers);
 }
 
-RequestsHandler* req_put(RequestsHandler* handler, char* url, char* data, char* additional_headers)
+RequestsHandler* req_put(const char* url, const char* data, const char* additional_headers)
 {
     return req_request("PUT ", url, data, additional_headers);
 }
 
-RequestsHandler* req_head(char* url, char* additional_headers)
+RequestsHandler* req_head(const char* url, const char* additional_headers)
 {
     return req_request("HEAD ", url, "", additional_headers);
 }
 
-RequestsHandler* req_request(char* method, char* url, char* data, char* additional_headers)
+RequestsHandler* req_request(const char* method, const char* url, const char* data, const char* additional_headers)
 {
     /* make a request with any method. Use the functions above instead. */
     int i;
@@ -373,7 +373,7 @@ char req_parse_headers(RequestsHandler* handler)
     return 1;
 }
 
-const char* req_get_header_value(RequestsHandler* handler, char* header_name)
+const char* req_get_header_value(RequestsHandler* handler, const char* header_name)
 {
     return ptree_get_value(handler->headers_tree, header_name);
 }

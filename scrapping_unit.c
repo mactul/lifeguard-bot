@@ -43,7 +43,7 @@ int get_base_url(char* host, char* url)
     return i;
 }
 
-char contains_relevant_words(char* url)
+char contains_relevant_words(const char* url)
 {
     char* relevant_words[] = {
         "download",
@@ -65,7 +65,38 @@ char contains_relevant_words(char* url)
     return 0;
 }
 
-char is_relevant_url(char* url, char priority)
+char req_is_file(RequestsHandler* handler)
+{
+    const char* content_type = req_get_header_value(handler, "content-type");
+    const char* content_disposition = req_get_header_value(handler, "content-disposition");
+
+    req_display_headers(handler);
+    
+    return (content_type != NULL && stristr(content_type, "text/html") == -1) || (content_disposition != NULL && stristr(content_disposition, "attachment") != -1);
+}
+
+char is_file(const char* url)
+{
+    RequestsHandler* handler;
+
+    handler = req_head(url, "");
+
+    if(handler == NULL)
+    {
+        // head is not working, try get to be sure
+        handler = req_get(url, "");
+        if(handler == NULL)
+            return 0;  // server unreachable
+    }
+
+    char result = req_is_file(handler);
+
+    req_close_connection(&handler);
+
+    return result;
+}
+
+char is_relevant_url(const char* url, char priority)
 {
     char host[MAX_URL_SIZE];
     char extension[MAX_EXTENSION_SIZE];
@@ -180,6 +211,16 @@ void find_urls(Links_data* data)
 
     if(handler == NULL)
         return;
+
+    if(req_is_file(handler))
+    {
+        data->file_certified = 1;
+        send_url(*data, data->url);
+
+        req_close_connection(&handler);
+
+        return;
+    }
     
     while((n = req_read_output_body(handler, (char*)buffer, BUFFER_SIZE)) > 0)
     {
@@ -189,6 +230,7 @@ void find_urls(Links_data* data)
             {
                 if(is_relevant_url(url, data->priority))
                 {
+                    data->file_certified = is_file(url);
                     printf("url found: %s\n", url);
                     send_url(*data, url);
                 }

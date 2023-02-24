@@ -20,9 +20,9 @@ def to_big_endian(b_array):
         return bytes(reversed(b_array))
     return b_array
 
-def build_links_data(priority, password, channel_id, message_id, url):
+def build_links_data(priority, file_certified, password, channel_id, message_id, url):
     bytes(reversed(bytes(ctypes.c_uint64(12))))
-    return bytes([priority])+to_big_endian(bytes(ctypes.c_uint64(password)))+to_big_endian(bytes(ctypes.c_uint64(channel_id)))+to_big_endian(bytes(ctypes.c_uint64(message_id)))+bytes(url, 'ascii')+bytes([0])
+    return bytes([priority])+bytes([file_certified])+to_big_endian(bytes(ctypes.c_uint64(password)))+to_big_endian(bytes(ctypes.c_uint64(channel_id)))+to_big_endian(bytes(ctypes.c_uint64(message_id)))+bytes(url, 'ascii')+bytes([0])
 
 def decode_audit_data(audit):
     print(audit)
@@ -102,14 +102,14 @@ def extract_urls(content):
     return urls
 
 
-async def send_link(channel_id, message_id, url):
+async def send_link(file_certified, channel_id, message_id, url):
     try:
         ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         ssl_ctx.check_hostname = False
         ssl_ctx.verify_mode = ssl.CERT_NONE
         reader, writer = await asyncio.open_connection(CENTRAL_IP, UNKNOWN_LINKS_PORT, ssl=ssl_ctx)
         
-        writer.write(build_links_data(1, CENTRAL_PASSWORD, channel_id, message_id, url))
+        writer.write(build_links_data(1, file_certified, CENTRAL_PASSWORD, channel_id, message_id, url))
         await writer.drain()
 
         data = await reader.read(1)
@@ -136,10 +136,10 @@ async def on_message(message:discord.Message):
         
     for attachment in message.attachments:
         print(attachment)
-        await send_link(message.channel.id, message.id, attachment.url)
+        await send_link(1, message.channel.id, message.id, attachment.url)
     
     for url in extract_urls(message.content):
-        await send_link(message.channel.id, message.id, url)
+        await send_link(0, message.channel.id, message.id, url)
 
 
 @client.event

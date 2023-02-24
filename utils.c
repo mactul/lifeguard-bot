@@ -72,7 +72,7 @@ int stristr(const char* string, const char* exp)
     return -1;
 }
 
-char starts_with(char* str, const char* ref)
+char starts_with(const char* str, const char* ref)
 {
     int i = 0;
     while(str[i] != '\0' && ref[i] != '\0' && str[i] == ref[i])
@@ -82,7 +82,7 @@ char starts_with(char* str, const char* ref)
     return ref[i] == '\0';
 }
 
-char starts_with_case_unsensitive(char* str, const char* ref)
+char starts_with_case_unsensitive(const char* str, const char* ref)
 {
     int i = 0;
     while(str[i] != '\0' && ref[i] != '\0' && tolower(str[i]) == tolower(ref[i]))
@@ -92,7 +92,7 @@ char starts_with_case_unsensitive(char* str, const char* ref)
     return ref[i] == '\0';
 }
 
-char char_in_str(char* str, char c)
+char char_in_str(const char* str, char c)
 {
     while(*str != '\0')
     {
@@ -159,7 +159,7 @@ void url_slicer(const char* url, char* host, char* extension)
     }
 }
 
-char trusted_host(char* host)
+char trusted_host(const char* host)
 {
     char* trusted_hosts[] = {
         "youtube.com",
@@ -169,6 +169,7 @@ char trusted_host(char* host)
         "twitter.com",
         "www.twitter.com",
         "github.com",
+        "stackoverflow.com",
         NULL
     };
 
