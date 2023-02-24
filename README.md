@@ -17,7 +17,7 @@ Lifeguard-bot is a security discord bot, scanning links and files for potential 
 - ~~redirect to the fastest server each time~~ DONE
 - ~~investigate the bug why virus_checker receive 0 bytes when we send many files in discord~~ DONE
 - ~~improve the gestion of http redirections~~ DONE
-- improve the way we differenciate files and websites (content-type)
+- ~~improve the way we differenciate files and websites (content-type)~~ DONE
 - add a virustotal verification to reduce false positive
     - if virustotal returns "virus"
         - probability = 100%
