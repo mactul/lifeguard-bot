@@ -24,6 +24,7 @@ RequestsHandler* req_patch(const char* url, const char* data, const char* additi
 RequestsHandler* req_put(const char* url, const char* data, const char* additional_headers);
 RequestsHandler* req_head(const char* url, const char* additional_headers);
 const char* req_get_header_value(RequestsHandler* handler, const char* header_name);
+short int req_get_status_code(RequestsHandler* handler);
 void req_display_headers(RequestsHandler* handler);
 int req_read_output_body(RequestsHandler* handler, char* buffer, int buffer_size);
 void req_close_connection(RequestsHandler** ppr);

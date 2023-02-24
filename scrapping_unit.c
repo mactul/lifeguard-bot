@@ -211,6 +211,9 @@ void find_urls(Links_data* data)
 
     if(handler == NULL)
         return;
+    
+    if(req_get_status_code(handler) >= 400)
+        return;
 
     if(req_is_file(handler))
     {
