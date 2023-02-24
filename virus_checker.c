@@ -120,7 +120,7 @@ void listen_links(void)
             if(data.password == CENTRAL_PASSWORD)
             {
                 Audit audit;
-                printf("%llu %s\n", data.message_id, data.url);
+                printf("%llu %s\n", (unsigned long long) data.message_id, data.url);
 
                 time_t start = time(NULL);
 

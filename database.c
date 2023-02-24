@@ -56,7 +56,7 @@ double best_malware_correspondance(Cmp_hash* phash)
         return 0.0;
     }
 
-    sprintf(query, "SELECT hash FROM virus WHERE size >= %llu AND size <= %llu", (uint64_t) (0.95 * (double)phash->size), (uint64_t) (1.05 * (double)phash->size));
+    sprintf(query, "SELECT hash FROM virus WHERE size >= %llu AND size <= %llu", (unsigned long long) (0.95 * (double)phash->size), (unsigned long long) (1.05 * (double)phash->size));
 
     if (mysql_query(con, query))
     {

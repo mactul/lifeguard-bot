@@ -5,7 +5,6 @@
 #include <openssl/ssl.h>
 #include "easy_tcp_tls.h"
 
-#define LITTLE_ENDIAN (&n)[0] == 1
 
 #if defined(_WIN32) || defined(WIN32)
     #include <winsock2.h>
@@ -49,7 +48,7 @@ void socket_cleanup(void)
 uint64_t socket_ntoh64(uint64_t input)
 {
     int n = 1;
-    if(LITTLE_ENDIAN)
+    if((&n)[0] == 1)  // LITTLE_ENDIAN
     {
         uint64_t rval;
         uint8_t *data = (uint8_t *)&rval;
@@ -304,7 +303,7 @@ SocketHandler* socket_accept(SocketHandler* server, ClientData* pclient_data)
 {
     SocketHandler* client;
     struct sockaddr_in peer_addr;
-    int addr_size = sizeof(struct sockaddr_in);
+    unsigned int addr_size = sizeof(struct sockaddr_in);
 
     client = (SocketHandler*) malloc(sizeof(SocketHandler));
 

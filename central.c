@@ -112,11 +112,11 @@ void* unknown_links_gestion(void* arg)
             data.channel_id = socket_ntoh64(data.channel_id);
             data.message_id = socket_ntoh64(data.message_id);
 
-            printf("%d %llu\n", data.priority, data.password);
+            printf("%d %llu\n", data.priority, (unsigned long long) data.password);
 
             if(data.password == CENTRAL_PASSWORD)
             {
-                printf("\n%llu %d %llu %llu %s\n", sizeof(data), data.priority, data.channel_id, data.message_id, data.url);
+                printf("\n%llu %d %llu %llu %s\n", (unsigned long long) sizeof(data), data.priority, (unsigned long long) data.channel_id, (unsigned long long) data.message_id, data.url);
 
                 url_slicer(data.url, host, extension);
 
@@ -172,7 +172,7 @@ void* conn_infos_gestion(void* arg)
             infos_data.password = socket_ntoh64(infos_data.password);
             infos_data.port = socket_ntoh64(infos_data.port);
 
-            printf("%s\n %llu %llu\n", infos_data.ip, infos_data.password, infos_data.port);
+            printf("%s\n %llu %llu\n", infos_data.ip, (unsigned long long) infos_data.password, (unsigned long long) infos_data.port);
 
             if(infos_data.password == CENTRAL_PASSWORD)
             {
