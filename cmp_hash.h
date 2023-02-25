@@ -12,7 +12,8 @@ typedef struct cmp_hash {
 enum status_codes {
     OK,
     UNKNOW_ERROR,
-    FILE_NOT_FOUND
+    FILE_NOT_FOUND,
+    HTTP_ERROR
 };
 
 enum status_codes cmp_create_hash(Cmp_hash* phash, char* filepath);

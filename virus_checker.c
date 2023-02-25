@@ -81,6 +81,27 @@ void send_audit_to_bot(Audit* paudit)
     socket_close(&client);
 }
 
+void resend_url(Links_data link_data)
+{
+    SocketHandler* client;
+
+    client = socket_ssl_client_init(CENTRAL_IP, UNKNOWN_LINKS_PORT, NULL);
+    
+    if(client == NULL)
+    {
+        socket_print_last_error();
+        return;
+    }
+    link_data.priority += 1;
+    link_data.password = socket_ntoh64(CENTRAL_PASSWORD);
+    link_data.channel_id = socket_ntoh64(link_data.channel_id);
+    link_data.message_id = socket_ntoh64(link_data.message_id);
+    
+    socket_send(client, (char*)&link_data, sizeof(link_data), 0);  // send the data to the server
+
+    socket_close(&client);
+}
+
 void listen_links(void)
 {
     SocketHandler* server;
@@ -124,29 +145,36 @@ void listen_links(void)
 
                 time_t start = time(NULL);
 
-                cmp_create_hash_from_url(&hash, data.url);
+                int error_code = cmp_create_hash_from_url(&hash, data.url);
 
-                printf("%d\n", hash.size);
-
-                audit.channel_id = socket_ntoh64(data.channel_id);
-                audit.message_id = socket_ntoh64(data.message_id);
-                audit.password = socket_ntoh64(CENTRAL_PASSWORD);
-                audit.p = best_malware_correspondance(&hash);
-                memset(audit.name, 0, sizeof(audit.name));
-                get_name_from_url(audit.name, data.url);
-
-                if(audit.p <= 0.5)
+                if(error_code = OK)
                 {
-                    audit.p = 0.0;
+                    printf("%d\n", hash.size);
+
+                    audit.channel_id = socket_ntoh64(data.channel_id);
+                    audit.message_id = socket_ntoh64(data.message_id);
+                    audit.password = socket_ntoh64(CENTRAL_PASSWORD);
+                    audit.p = best_malware_correspondance(&hash);
+                    memset(audit.name, 0, sizeof(audit.name));
+                    get_name_from_url(audit.name, data.url);
+
+                    if(audit.p <= 0.5)
+                    {
+                        audit.p = 0.0;
+                    }
+                    else
+                    {
+                        audit.p = (audit.p - 0.5)*2;
+                    }
+
+                    printf("p: %f\n", audit.p);
+
+                    send_audit_to_bot(&audit);
                 }
-                else
+                else if(error_code == UNKNOW_ERROR)
                 {
-                    audit.p = (audit.p - 0.5)*2;
+                    resend_url(data);
                 }
-
-                printf("p: %f\n", audit.p);
-
-                send_audit_to_bot(&audit);
 
                 avg_time_seconds = (avg_time_seconds*number_of_files_downloaded + difftime(time(NULL), start))/(number_of_files_downloaded+1);
                 number_of_files_downloaded++;

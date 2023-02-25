@@ -90,6 +90,12 @@ enum status_codes cmp_create_hash_from_url(Cmp_hash* phash, char* url)
         return UNKNOW_ERROR;
     }
 
+    if(req_get_status_code(handler) >= 400)
+    {
+        printf("HTTP ERROR: %d\n", req_get_status_code(handler));
+        return HTTP_ERROR;
+    }
+
     while(phash->size < MAX_U32 && n != 0)
     {
         errno = 0;
