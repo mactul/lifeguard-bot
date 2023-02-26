@@ -82,7 +82,15 @@ async def handle_audit_response(reader, writer):
 async def audit_server():
     while True:
         try:
-            server = await asyncio.start_server(handle_audit_response, BOT_IP, AUDIT_PORT)
+            ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            ssl_ctx.options |= ssl.OP_NO_TLSv1
+            ssl_ctx.options |= ssl.OP_NO_TLSv1_1
+            ssl_ctx.options |= ssl.OP_SINGLE_DH_USE
+            ssl_ctx.options |= ssl.OP_SINGLE_ECDH_USE
+            ssl_ctx.check_hostname = False
+            ssl_ctx.verify_mode = ssl.CERT_NONE
+            ssl_ctx.load_cert_chain('cert.pem', keyfile='key.pem')
+            server = await asyncio.start_server(handle_audit_response, BOT_IP, AUDIT_PORT, ssl=ssl_ctx)
 
             addrs = ', '.join(str(sock.getsockname()) for sock in server.sockets)
             print(f'Serving on {addrs}')

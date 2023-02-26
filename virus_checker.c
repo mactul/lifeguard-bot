@@ -68,7 +68,7 @@ void send_audit_to_bot(Audit* paudit)
 {
     SocketHandler* client;
 
-    client = socket_client_init(BOT_IP, AUDIT_PORT);
+    client = socket_ssl_client_init(BOT_IP, AUDIT_PORT, NULL);
 
     if(client == NULL)
     {
