@@ -48,24 +48,24 @@ void bytescpy(char* dest, const char* src, int n)
 
 /* return the position of the first occurence's end
 this function is non case-sensitive */
-int stristr(const char* string, const char* exp)
+int stristr(const char* string, const char* expr)
 {
     int string_counter = 0;
-    int exp_counter = 0;
+    int expr_counter = 0;
     while(string[string_counter] != '\0')
     {
-        if(tolower(string[string_counter]) == tolower(exp[0]))
+        if(tolower(string[string_counter]) == tolower(expr[0]))
         {
-            while(exp[exp_counter] != '\0' && string[string_counter] != '\0' && tolower(string[string_counter]) == tolower(exp[exp_counter]))
+            while(expr[expr_counter] != '\0' && string[string_counter] != '\0' && tolower(string[string_counter]) == tolower(expr[expr_counter]))
             {
-                exp_counter++;
+                expr_counter++;
                 string_counter++;
             }
-            if(exp[exp_counter] == '\0')
+            if(expr[expr_counter] == '\0')
             {
                 return string_counter;
             }
-            exp_counter = 0;
+            expr_counter = 0;
         }
         string_counter++;
     }
