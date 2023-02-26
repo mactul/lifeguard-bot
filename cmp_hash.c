@@ -128,11 +128,11 @@ enum status_codes cmp_create_hash_from_url(Cmp_hash* phash, char* url)
 double cmp_two_hashes(Cmp_hash* phash1, Cmp_hash* phash2)
 {
     double total = 0.0;
-    double division = 50.0;
+    double division = 10.0;
     double temp;
     
-    // coef 50
-    total += 50.0 * corresponding_rate(phash1->size, phash2->size);
+    // coef 10
+    total += 10.0 * corresponding_rate(phash1->size, phash2->size);
     
     for(int i=0; i < 256; i++)
     {

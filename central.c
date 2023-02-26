@@ -134,8 +134,11 @@ void* unknown_links_gestion(void* arg)
                 else if(!is_image_extension(extension))
                 {
                     // it's a file and not an image
-                    queue_add_links(&links_queue_root, &data, DEST_VIRUS_CHECKER, &links_mutex);
-                    sem_post(&links_sem);
+                    if(data.priority <= MAX_DEPTH + 2)
+                    {
+                        queue_add_links(&links_queue_root, &data, DEST_VIRUS_CHECKER, &links_mutex);
+                        sem_post(&links_sem);
+                    }
                 }
 
                 socket_send(client, &returned, sizeof(char), 0);

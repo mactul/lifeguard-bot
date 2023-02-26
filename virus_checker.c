@@ -147,7 +147,7 @@ void listen_links(void)
 
                 int error_code = cmp_create_hash_from_url(&hash, data.url);
 
-                if(error_code = OK)
+                if(error_code == OK)
                 {
                     printf("%d\n", hash.size);
 

@@ -303,7 +303,11 @@ SocketHandler* socket_accept(SocketHandler* server, ClientData* pclient_data)
 {
     SocketHandler* client;
     struct sockaddr_in peer_addr;
-    unsigned int addr_size = sizeof(struct sockaddr_in);
+    #ifdef IS_WINDOWS
+        int addr_size = sizeof(struct sockaddr_in);
+    #else
+        unsigned int addr_size = sizeof(struct sockaddr_in);
+    #endif
 
     client = (SocketHandler*) malloc(sizeof(SocketHandler));
 

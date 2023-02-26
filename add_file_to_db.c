@@ -13,9 +13,14 @@ int main(int argc, char* argv[])
 
     Cmp_hash hash;
 
-    cmp_create_hash(&hash, argv[1]);
-
-    add_hash_to_db(&hash);
+    if(cmp_create_hash(&hash, argv[1]) == OK)
+    {
+        add_hash_to_db(&hash);
+    }
+    else
+    {
+        printf("File Not Found\n");
+    }
 
     return 0;
 }

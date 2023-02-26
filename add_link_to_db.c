@@ -16,13 +16,10 @@ int main(int argc, char* argv[])
 
     Cmp_hash hash;
 
-    printf("%s\n", argv[1]);
-
-    cmp_create_hash_from_url(&hash, argv[1]);
-
-    printf("%d\n", hash.size);
-
-    add_hash_to_db(&hash);
+    if(cmp_create_hash_from_url(&hash, argv[1]) == OK)
+    {
+        add_hash_to_db(&hash);
+    }
 
     req_cleanup();
 
