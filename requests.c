@@ -207,6 +207,12 @@ RequestsHandler* req_request(const char* method, const char* url, const char* da
 
     handler = (RequestsHandler*) malloc(sizeof(RequestsHandler));
 
+    if(handler == NULL)
+    {
+        _error_code = MALLOC_ERROR;
+        return NULL;
+    }
+
     handler->headers_tree = NULL;
     handler->reading_residue = NULL;
     handler->residue_size = 0;
@@ -239,7 +245,7 @@ RequestsHandler* req_request(const char* method, const char* url, const char* da
     int total = strlen(headers);
     int sent = 0;
     do {
-        int bytes = socket_send(handler->handler, headers+sent, total-sent, 0);
+        int bytes = socket_send(handler->handler, headers + sent, total - sent, 0);
         if (bytes < 0)
         {
             _error_code = ERROR_WRITE;
@@ -248,10 +254,15 @@ RequestsHandler* req_request(const char* method, const char* url, const char* da
         }
         if (bytes == 0)
             break;
-        sent+=bytes;
+        sent += bytes;
     } while (sent < total);
 
-    req_parse_headers(handler);
+    if(!req_parse_headers(handler))
+    {
+        _error_code = MALLOC_ERROR;
+        req_close_connection(&handler);
+        return NULL;
+    }
 
     if(strcmp(method, "HEAD ") == 0)
     {
@@ -286,6 +297,28 @@ RequestsHandler* req_request(const char* method, const char* url, const char* da
     return handler;
 }
 
+void _update_http_status(RequestsHandler* handler, const char* line)
+{
+    if(starts_with(line, "HTTP/"))
+    {
+        int k = 0;
+        while(line[k] != '\0' && line[k] != ' ')
+            k++;
+        if(line[k] != '\0')
+            k++;
+        char status_code[4];
+        int l = 0;
+        while(l < 3 && isdigit(line[k]))
+        {
+            status_code[l] = line[k];
+            l++;
+            k++;
+        }
+        status_code[l] = '\0';
+        handler->status_code = atoi(status_code);
+    }
+}
+
 
 char req_parse_headers(RequestsHandler* handler)
 {
@@ -312,16 +345,19 @@ char req_parse_headers(RequestsHandler* handler)
 
             if(j == PARSER_BUFFER_SIZE-1)
             {
+                char success;
                 if(in_value)
                 {
-                    if(ptree_update_value(handler->headers_tree, strtrim(key_value)) == 0)
-                        return 0;
+                    success = ptree_update_value(handler->headers_tree, strtrim(key_value));
                 }
                 else
                 {
-                    if(ptree_update_key(handler->headers_tree, strtrim(key_value)) == 0)
-                        return 0;
+                    success = ptree_update_key(handler->headers_tree, strtrim(key_value));
                 }
+
+                if(!success)
+                    return 0;
+                
                 j = 0;
                 key_value[0] = '\0';
             }
@@ -346,24 +382,7 @@ char req_parse_headers(RequestsHandler* handler)
                 else
                 {
                     // This is meant to happen with the first header "HTTP/1.1 ERROR_CODE MSG"
-                    if(starts_with(key_value, "HTTP/"))
-                    {
-                        int k = 0;
-                        while(key_value[k] != '\0' && key_value[k] != ' ')
-                            k++;
-                        if(key_value[k] != '\0')
-                            k++;
-                        char status_code[4];
-                        int l = 0;
-                        while(l < 3 && isdigit(key_value[k]))
-                        {
-                            status_code[l] = key_value[k];
-                            l++;
-                            k++;
-                        }
-                        status_code[l] = '\0';
-                        handler->status_code = atoi(status_code);
-                    }
+                    _update_http_status(handler, key_value);
                     ptree_abort(handler->headers_tree);
                 }
                 j = 0;
@@ -574,10 +593,12 @@ void req_close_connection(RequestsHandler** ppr)
     {
         return;
     }
-    socket_close(&((*ppr)->handler));
-    ptree_free(&((*ppr)->headers_tree));
     if((*ppr)->reading_residue != NULL)
+    {
         free((*ppr)->reading_residue);
+    }
+    ptree_free(&((*ppr)->headers_tree));
+    socket_close(&((*ppr)->handler));
     free(*ppr);
     *ppr = NULL;
 }

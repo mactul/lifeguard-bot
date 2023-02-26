@@ -8,7 +8,8 @@ enum errors {
     ERROR_WRITE = -4,
     ERROR_PROTOCOL = -5,
     ERROR_MALLOC = -6,
-    UNABLE_TO_BUILD_SOCKET = -7
+    UNABLE_TO_BUILD_SOCKET = -7,
+    MALLOC_ERROR = -8
 };
 
 typedef struct requests_handler RequestsHandler;
