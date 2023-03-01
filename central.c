@@ -10,7 +10,8 @@
 #include "central_credentials.h"
 #include "database.h"
 #include "queue.h"
-#include "utils.h"
+#include "str_utils.h"
+#include "url_utils.h"
 
 
 /***********************************************************/

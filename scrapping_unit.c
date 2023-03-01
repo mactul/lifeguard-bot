@@ -5,7 +5,8 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <time.h>
-#include "utils.h"
+#include "str_utils.h"
+#include "url_utils.h"
 #include "requests.h"
 #include "easy_tcp_tls.h"
 #include "connexion_data.h"

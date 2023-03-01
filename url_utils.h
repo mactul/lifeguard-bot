@@ -1,4 +1,4 @@
-#define relu(x) x < 0 ? 0 : x
+#define MAX_URL_SIZE 1024
 
 #define is_web_extension(extension) ((extension[0] == '\0' || strcmp(extension, ".html") == 0 \
                     || strcmp(extension, ".htm") == 0 || strcmp(extension, ".asp") == 0 \
@@ -11,14 +11,7 @@
                     || strcmp(extension, ".jpeg") == 0 || strcmp(extension, ".bmp") == 0 \
                     || strcmp(extension, ".webp") == 0 || strcmp(extension, ".gif") == 0)
 
-void int_to_string(int n, char s[]);
-void reverse_string(char s[]);
-void bytescpy(char* dest, const char* src, int n);
-int stristr(const char* string, const char* expr);
-char starts_with(const char* str, const char* ref);
-char char_in_str(const char* str, char c);
-char starts_with_case_unsensitive(const char* str, const char* ref);
+
 void url_slicer(const char* url, char* host, char* extension);
 char trusted_host(const char* host);
-char* strtrim(char* str);
 void retrieve_absolute_url(char* url, const char* reference_url);

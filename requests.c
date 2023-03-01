@@ -21,7 +21,8 @@
 
 #include "easy_tcp_tls.h"
 #include "requests.h"
-#include "utils.h"
+#include "str_utils.h"
+#include "url_utils.h"
 #include "parser_tree.h"
 
 #define MAX_CHAR_ON_HOST 253  /* this is exact, don't change */
